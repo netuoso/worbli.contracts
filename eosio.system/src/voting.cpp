@@ -87,20 +87,14 @@ namespace eosiosystem {
       });
    }
 
-   void system_contract::update_elected_producers( block_timestamp block_time ) {
+   void system_contract::update_producers( block_timestamp block_time ) {
       _gstate.last_producer_schedule_update = block_time;
 
-      auto idx = _producers.get_index<"prototalvote"_n>();
-
       std::vector< std::pair<eosio::producer_key,uint16_t> > top_producers;
-      top_producers.reserve(21);
 
-      for ( auto it = idx.cbegin(); it != idx.cend() && top_producers.size() < 21 && 0 < it->total_votes && it->active(); ++it ) {
-         top_producers.emplace_back( std::pair<eosio::producer_key,uint16_t>({{it->owner, it->producer_key}, it->location}) );
-      }
-
-      if ( top_producers.size() < _gstate.last_producer_schedule_size ) {
-         return;
+      for( const auto& p : _producers ) {
+        if( p.is_active )
+            top_producers.emplace_back( std::pair<eosio::producer_key,uint16_t>({{p.owner, p.producer_key}, p.location}) );
       }
 
       /// sort by producer name
@@ -117,6 +111,7 @@ namespace eosiosystem {
       if( set_proposed_producers( packed_schedule.data(),  packed_schedule.size() ) >= 0 ) {
          _gstate.last_producer_schedule_size = static_cast<decltype(_gstate.last_producer_schedule_size)>( top_producers.size() );
       }
+
    }
 
    double stake2vote( int64_t staked ) {

@@ -13,6 +13,7 @@ namespace eosiosystem {
    system_contract::system_contract( name s, name code, datastream<const char*> ds )
    :native(s,code,ds),
     _voters(_self, _self.value),
+    _producer_pay(_self, _self.value),
     _producers(_self, _self.value),
     _producers2(_self, _self.value),
     _global(_self, _self.value),
