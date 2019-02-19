@@ -107,6 +107,17 @@ namespace eosiosystem {
       _gstate2.new_ram_per_block = bytes_per_block;
    }
 
+   void system_contract::setusagelvl( uint8_t new_level ) {
+      require_auth( "worbli.admin"_n );
+
+      eosio_assert( _gstate.network_usage_level < new_level, "usage level may only be increased" ); 
+      eosio_assert( new_level <= 100, "usage level cannot excced 100" );
+      eosio_assert( new_level > 0, "usage level cannot be negative" );
+
+      _gstate.network_usage_level = new_level;
+      _global.set( _gstate, _self );
+   }
+
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {
       require_auth( _self );
       (eosio::blockchain_parameters&)(_gstate) = params;
@@ -453,11 +464,11 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
      (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)
-     (rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (rmvproducer)(updtrevision)(bidname)(bidrefund)(setusagelvl)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp
-     (regproducer)(unregprod)(voteproducer)(regproxy)
+     (regproducer)(addproducer)(unregprod)(voteproducer)(togglesched)
      // producer_pay.cpp
      (onblock)(claimrewards)
 )

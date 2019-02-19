@@ -120,7 +120,6 @@ namespace eosiosystem {
 
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                  owner;
-      double                total_votes = 0;
       eosio::public_key     producer_key; /// a packed public key object
       bool                  is_active = true;
       std::string           url;
@@ -129,12 +128,11 @@ namespace eosiosystem {
       uint16_t              location = 0;
 
       uint64_t primary_key()const { return owner.value;                             }
-      double   by_votes()const    { return is_active ? -total_votes : total_votes;  }
       bool     active()const      { return is_active;                               }
       void     deactivate()       { producer_key = public_key(); is_active = false; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
+      EOSLIB_SERIALIZE( producer_info, (owner)(producer_key)(is_active)(url)
                         (produced_blocks)(last_claim_time)(location) )
    };
 
@@ -201,9 +199,7 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
 
-   typedef eosio::multi_index< "producers"_n, producer_info,
-                               indexed_by<"prototalvote"_n, const_mem_fun<producer_info, double, &producer_info::by_votes>  >
-                             > producers_table;
+   typedef eosio::multi_index< "producers"_n, producer_info > producers_table;
    typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
 
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
@@ -258,6 +254,9 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
+
+         [[eosio::action]]
+         void setusagelvl( uint8_t new_level );
 
          [[eosio::action]]
          void setacctram( name account, std::optional<int64_t> ram_bytes );
@@ -332,6 +331,12 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void unregprod( const name producer );
+         
+         [[eosio::action]]
+         void addproducer( const name producer );
+
+         [[eosio::action]]
+         void togglesched( bool is_active );
 
          [[eosio::action]]
          void setram( uint64_t max_ram_size );
@@ -340,9 +345,6 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void voteproducer( const name voter, const name proxy, const std::vector<name>& producers );
-
-         [[eosio::action]]
-         void regproxy( const name proxy, bool isproxy );
 
          [[eosio::action]]
          void setparams( const eosio::blockchain_parameters& params );
@@ -390,11 +392,8 @@ namespace eosiosystem {
 
          //defined in voting.hpp
          void update_producers( block_timestamp timestamp );
-         void update_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
 
          // defined in voting.cpp
-         void propagate_weight_change( const voter_info& voter );
-
          double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
                                                time_point ct,
                                                double shares_rate, bool reset_to_zero = false );
