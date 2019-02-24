@@ -344,9 +344,6 @@ namespace eosiosystem {
          void setramrate( uint16_t bytes_per_block );
 
          [[eosio::action]]
-         void voteproducer( const name voter, const name proxy, const std::vector<name>& producers );
-
-         [[eosio::action]]
          void setparams( const eosio::blockchain_parameters& params );
 
          // functions defined in producer_pay.cpp
@@ -362,11 +359,9 @@ namespace eosiosystem {
          [[eosio::action]]
          void updtrevision( uint8_t revision );
 
+         // worlbi admin
          [[eosio::action]]
-         void bidname( name bidder, name newname, asset bid );
-
-         [[eosio::action]]
-         void bidrefund( name bidder, name newname );
+         void setprods( std::vector<eosio::producer_key> schedule );
 
       private:
          // Implementation details:

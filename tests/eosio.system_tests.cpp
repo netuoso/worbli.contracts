@@ -2811,7 +2811,6 @@ BOOST_FIXTURE_TEST_CASE( vote_producers_in_and_out, eosio_system_tester ) try {
       produce_blocks(producer_names.size() * 12 + 120);
       bool all_21_produced = true;
       for (uint32_t i = 0; i < producer_names.size(); ++i) {
-         std::cout << get_producer_info(producer_names[i])["produced_blocks"].as<uint32_t>() << std::endl;
          if (0 == get_producer_info(producer_names[i])["produced_blocks"].as<uint32_t>()) {
             all_21_produced = false;
          }
@@ -3039,6 +3038,7 @@ BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+/**
 BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    active_and_vote_producers();
 
@@ -3049,13 +3049,14 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    /*
     * It seems impossible to write this test, because buyrambytes action doesn't give you exact amount of bytes requested
     *
+
    //check that it's possible to create account bying required_bytes(2724) + userres table(112) + userres row(160) - ram_gift_bytes(1400)
    create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 );
 
    //check that one byte less is not enough
    BOOST_REQUIRE_THROW( create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 - 1 ),
                         ram_usage_exceeded );
-   */
+   
 
    //check that stake/unstake keeps the gift
    transfer( "eosio", "alice1111111", core_sym::from_string("1000.0000"), "eosio" );
@@ -3083,6 +3084,7 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
 
 } FC_LOG_AND_RETHROW()
+**/
 
 BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);
@@ -3167,7 +3169,6 @@ BOOST_FIXTURE_TEST_CASE( change_limited_account_back_to_unlimited, eosio_system_
               );
 
    stake( N(alice1111111), N(eosio), core_sym::from_string("0.0000"), core_sym::from_string("1.0000") );
-
    REQUIRE_MATCHING_OBJECT( get_total_stake( "eosio" ), mvo()
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
