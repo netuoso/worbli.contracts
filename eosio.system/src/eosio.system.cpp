@@ -285,9 +285,7 @@ namespace eosiosystem {
       require_auth( _self );
       auto prod = _producers.find( producer.value );
       eosio_assert( prod != _producers.end(), "producer not found" );
-      _producers.modify( prod, same_payer, [&](auto& p) {
-            p.deactivate();
-         });
+      _producers.erase( prod );
    }
 
    void system_contract::updtrevision( uint8_t revision ) {
