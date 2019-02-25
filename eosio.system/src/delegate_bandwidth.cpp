@@ -35,12 +35,13 @@ namespace eosiosystem {
       name          owner;
       asset         net_weight;
       asset         cpu_weight;
+      asset         ram_stake;
       int64_t       ram_bytes = 0;
 
       uint64_t primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( user_resources, (owner)(net_weight)(cpu_weight)(ram_bytes) )
+      EOSLIB_SERIALIZE( user_resources, (owner)(net_weight)(cpu_weight)(ram_stake)(ram_bytes) )
    };
 
 
@@ -65,11 +66,14 @@ namespace eosiosystem {
       time_point_sec  request_time;
       eosio::asset    net_amount;
       eosio::asset    cpu_amount;
+      eosio::asset    ram_amount;
+      uint64_t        ram_bytes;
+
 
       uint64_t  primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( refund_request, (owner)(request_time)(net_amount)(cpu_amount) )
+      EOSLIB_SERIALIZE( refund_request, (owner)(request_time)(net_amount)(cpu_amount)(ram_amount)(ram_bytes) )
    };
 
    /**
@@ -209,6 +213,7 @@ namespace eosiosystem {
          int64_t ram_bytes, net, cpu;
          get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
          set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+         
       }
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
@@ -315,7 +320,8 @@ namespace eosiosystem {
             }
          }
 
-         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 ) {
+         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 && 
+              tot_itr->ram_stake.amount == 0) {
             totals_tbl.erase( tot_itr );
          }
       } // tot_itr can be invalid, should go out of scope
@@ -361,7 +367,8 @@ namespace eosiosystem {
                eosio_assert( 0 <= req->net_amount.amount, "negative net refund amount" ); //should never happen
                eosio_assert( 0 <= req->cpu_amount.amount, "negative cpu refund amount" ); //should never happen
 
-               if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 ) {
+               if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 && req->ram_bytes == 0 &&
+                  req->ram_amount.amount == 0) {
                   refunds_tbl.erase( req );
                   need_deferred_trx = false;
                } else {

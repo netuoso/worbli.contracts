@@ -3046,9 +3046,9 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    int64_t ram_bytes_orig, net_weight, cpu_weight;
    rlm.get_account_limits( N(alice1111111), ram_bytes_orig, net_weight, cpu_weight );
 
-   /*
-    * It seems impossible to write this test, because buyrambytes action doesn't give you exact amount of bytes requested
-    *
+   
+    // It seems impossible to write this test, because buyrambytes action doesn't give you exact amount of bytes requested
+    
 
    //check that it's possible to create account bying required_bytes(2724) + userres table(112) + userres row(160) - ram_gift_bytes(1400)
    create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 );
@@ -3173,6 +3173,7 @@ BOOST_FIXTURE_TEST_CASE( change_limited_account_back_to_unlimited, eosio_system_
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
       ("cpu_weight", core_sym::from_string("1.0000"))
+      ("ram_stake", "0 ")
       ("ram_bytes",  0)
    );
 
@@ -3251,6 +3252,7 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
       ("cpu_weight", core_sym::from_string("0.0000"))
+      ("ram_stake", "0 ")
       ("ram_bytes",  total_res["ram_bytes"].as_int64() )
    );
 

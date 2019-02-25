@@ -278,6 +278,10 @@ namespace eosiosystem {
          void delegatebw( name from, name receiver,
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
+         [[eosio::action]]
+         void delegateram( account_name from, account_name receiver,
+                          int64_t bytes );
+
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or
