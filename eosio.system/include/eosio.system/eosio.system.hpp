@@ -279,7 +279,7 @@ namespace eosiosystem {
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
          [[eosio::action]]
-         void delegateram( account_name from, account_name receiver,
+         void delegateram( name from, name receiver,
                           int64_t bytes );
 
 
@@ -312,6 +312,8 @@ namespace eosiosystem {
          [[eosio::action]]
          void buyram( name payer, name receiver, asset quant );
          [[eosio::action]]
+         void buyramold( name payer, name receiver, asset quant );
+         [[eosio::action]]
          void buyrambytes( name payer, name receiver, uint32_t bytes );
 
          /**
@@ -320,6 +322,8 @@ namespace eosiosystem {
           */
          [[eosio::action]]
          void sellram( name account, int64_t bytes );
+         [[eosio::action]]
+         void sellramold( name account, int64_t bytes );
 
          /**
           *  This action is called after the delegation-period to claim all pending
