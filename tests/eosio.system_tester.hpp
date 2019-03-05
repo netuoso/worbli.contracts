@@ -208,7 +208,7 @@ public:
    }
 
    transaction_trace_ptr setup_producer_accounts( const std::vector<account_name>& accounts,
-                                                  asset ram = core_sym::from_string("1.0000"),
+                                                  asset ram = core_sym::from_string("100.0000"),
                                                   asset cpu = core_sym::from_string("80.0000"),
                                                   asset net = core_sym::from_string("80.0000")
                                                 )
