@@ -17,14 +17,12 @@ namespace eosiosystem {
     _producers(_self, _self.value),
     _producers2(_self, _self.value),
     _global(_self, _self.value),
-    _global2(_self, _self.value),
     _global3(_self, _self.value),
     _rammarket(_self, _self.value)
    {
 
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
-      _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
       _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
    }
 
@@ -51,7 +49,6 @@ namespace eosiosystem {
 
    system_contract::~system_contract() {
       _global.set( _gstate, _self );
-      _global2.set( _gstate2, _self );
       _global3.set( _gstate3, _self );
    }
 
@@ -73,38 +70,6 @@ namespace eosiosystem {
       });
 
       _gstate.max_ram_size = max_ram_size;
-   }
-
-   void system_contract::update_ram_supply() {
-      auto cbt = current_block_time();
-
-      if( cbt <= _gstate2.last_ram_increase ) return;
-
-      auto itr = _rammarket.find(ramcore_symbol.raw());
-      auto new_ram = (cbt.slot - _gstate2.last_ram_increase.slot)*_gstate2.new_ram_per_block;
-      _gstate.max_ram_size += new_ram;
-
-      /**
-       *  Increase the amount of ram for sale based upon the change in max ram size.
-       */
-      _rammarket.modify( itr, same_payer, [&]( auto& m ) {
-         m.base.balance.amount += new_ram;
-      });
-      _gstate2.last_ram_increase = cbt;
-   }
-
-   /**
-    *  Sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to
-    *  a maximum rate of 3 TB per year.
-    *
-    *  If update_ram_supply hasn't been called for the most recent block, then new ram will
-    *  be allocated at the old rate up to the present block before switching the rate.
-    */
-   void system_contract::setramrate( uint16_t bytes_per_block ) {
-      require_auth( _self );
-
-      update_ram_supply();
-      _gstate2.new_ram_per_block = bytes_per_block;
    }
 
    void system_contract::setusagelvl( uint8_t new_level ) {
@@ -300,16 +265,6 @@ namespace eosiosystem {
       set_proposed_producers(buffer, size);
    }
 
-   void system_contract::updtrevision( uint8_t revision ) {
-      require_auth( _self );
-      eosio_assert( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
-      eosio_assert( revision == _gstate2.revision + 1, "can only increment revision by one" );
-      eosio_assert( revision <= 1, // set upper bound to greatest revision supported in the code
-                    "specified revision is not yet supported by the code" );
-      _gstate2.revision = revision;
-   }
-
-
    /**
     *  Called after a new account is created. This code enforces resource-limits rules
     *  for new accounts as well as new account naming conventions.
@@ -394,8 +349,8 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)
-     (rmvproducer)(updtrevision)(setusagelvl)
+     (init)(setram)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)
+     (rmvproducer)(setusagelvl)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

@@ -26,11 +26,6 @@ namespace eosiosystem {
       name producer;
       _ds >> timestamp >> producer;
 
-      // _gstate2.last_block_num is not used anywhere in the system contract code anymore.
-      // Although this field is deprecated, we will continue updating it for now until the last_block_num field
-      // is eventually completely removed, at which point this line can be removed.
-      _gstate2.last_block_num = timestamp;
-
       /** until activated no new rewards are paid */
       if( !_gstate.is_producer_schedule_active )
          return;

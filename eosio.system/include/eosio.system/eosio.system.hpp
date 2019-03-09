@@ -71,22 +71,6 @@ namespace eosiosystem {
                                 (is_producer_schedule_active)(network_usage_level) )
    };
 
-   /**
-    * Defines new global state parameters added after version 1.0
-    */
-   struct [[eosio::table("global2"), eosio::contract("eosio.system")]] eosio_global_state2 {
-      eosio_global_state2(){}
-
-      uint16_t          new_ram_per_block = 0;
-      block_timestamp   last_ram_increase;
-      block_timestamp   last_block_num; /* deprecated */
-      double            total_producer_votepay_share = 0;
-      uint8_t           revision = 0; ///< used to track version updates in the future.
-
-      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)
-                        (total_producer_votepay_share)(revision) )
-   };
-
    struct [[eosio::table("global3"), eosio::contract("eosio.system")]] eosio_global_state3 {
       eosio_global_state3() { }
       time_point        last_vpay_state_update;
@@ -180,7 +164,6 @@ namespace eosiosystem {
    typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
 
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
-   typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
@@ -193,10 +176,8 @@ namespace eosiosystem {
          producers_table         _producers;
          producers_table2        _producers2;
          global_state_singleton  _global;
-         global_state2_singleton _global2;
          global_state3_singleton _global3;
          eosio_global_state      _gstate;
-         eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
          rammarket               _rammarket;
 
@@ -325,8 +306,6 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setram( uint64_t max_ram_size );
-         [[eosio::action]]
-         void setramrate( uint16_t bytes_per_block );
 
          [[eosio::action]]
          void setparams( const eosio::blockchain_parameters& params );
@@ -340,9 +319,6 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void rmvproducer( name producer );
-
-         [[eosio::action]]
-         void updtrevision( uint8_t revision );
 
          // worlbi admin
          [[eosio::action]]
@@ -363,8 +339,6 @@ namespace eosiosystem {
          static block_timestamp current_block_time();
 
          symbol core_symbol()const;
-
-         void update_ram_supply();
 
          //defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,

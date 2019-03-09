@@ -2989,6 +2989,7 @@ BOOST_FIXTURE_TEST_CASE( setram_effect, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+/**
 BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
 
    const uint64_t init_max_ram_size = 64ll*1024 * 1024 * 1024;
@@ -3036,6 +3037,7 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
    //BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * old_rate + 6 * rate, get_global_state()["max_ram_size"].as_uint64() );
 
 } FC_LOG_AND_RETHROW()
+**/
 
 BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( "alice1111111" ) );
@@ -3067,7 +3069,6 @@ BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-/**
 BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    active_and_vote_producers();
 
@@ -3076,15 +3077,16 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    rlm.get_account_limits( N(alice1111111), ram_bytes_orig, net_weight, cpu_weight );
 
    
-    // It seems impossible to write this test, because buyrambytes action doesn't give you exact amount of bytes requested
-    
-
+   /*
+    * It seems impossible to write this test, because buyrambytes action doesn't give you exact amount of bytes requested
+    *
    //check that it's possible to create account bying required_bytes(2724) + userres table(112) + userres row(160) - ram_gift_bytes(1400)
    create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 );
 
    //check that one byte less is not enough
    BOOST_REQUIRE_THROW( create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 - 1 ),
                         ram_usage_exceeded );
+   */
    
 
    //check that stake/unstake keeps the gift
@@ -3113,7 +3115,7 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
 
 } FC_LOG_AND_RETHROW()
-**/
+
 
 BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);
@@ -3283,7 +3285,7 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
       ("cpu_weight", core_sym::from_string("0.0000"))
-      ("ram_stake", core_sym::from_string("20136.3970"))
+      ("ram_stake", core_sym::from_string("19044.2352"))
       ("ram_bytes",  total_res["ram_bytes"].as_int64() )
    );
 

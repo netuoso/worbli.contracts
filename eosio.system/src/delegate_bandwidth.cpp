@@ -129,7 +129,6 @@ namespace eosiosystem {
    void system_contract::buyramold( name payer, name receiver, asset quant )
    {
       require_auth( payer );
-      update_ram_supply();
 
       eosio_assert( quant.symbol == core_symbol(), "must buy ram with core token" );
       eosio_assert( quant.amount > 0, "must purchase a positive amount" );
@@ -199,7 +198,7 @@ namespace eosiosystem {
 
       const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
       const uint64_t token_precision = token_supply.symbol.precision();
-      const uint64_t bytes_per_token = uint64_t((_gstate.max_ram_size / (double)token_supply.amount) * pow(10,token_precision));
+      const uint64_t bytes_per_token = uint64_t(((_gstate.max_ram_size * pow(10,token_precision)) / (double)token_supply.amount) );
       
       uint64_t bytes_out = uint64_t(bytes_per_token * quant.amount / pow(10,token_precision));
     
@@ -293,7 +292,6 @@ namespace eosiosystem {
     */
    void system_contract::sellramold( name account, int64_t bytes ) {
       require_auth( account );
-      update_ram_supply();
 
       eosio_assert( bytes > 0, "cannot sell negative byte" );
 
