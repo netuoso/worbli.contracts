@@ -71,14 +71,6 @@ namespace eosiosystem {
                                 (is_producer_schedule_active)(network_usage_level) )
    };
 
-   struct [[eosio::table("global3"), eosio::contract("eosio.system")]] eosio_global_state3 {
-      eosio_global_state3() { }
-      time_point        last_vpay_state_update;
-      double            total_vpay_share_change_rate = 0;
-
-      EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
-   };
-
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                  owner;
       eosio::public_key     producer_key; /// a packed public key object
@@ -95,17 +87,6 @@ namespace eosiosystem {
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(producer_key)(is_active)(url)
                         (produced_blocks)(last_claim_time)(location) )
-   };
-
-   struct [[eosio::table, eosio::contract("eosio.system")]] producer_info2 {
-      name            owner;
-      double          votepay_share = 0;
-      time_point      last_votepay_share_update;
-
-      uint64_t primary_key()const { return owner.value; }
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_pay {
@@ -161,10 +142,8 @@ namespace eosiosystem {
    typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
 
    typedef eosio::multi_index< "producers"_n, producer_info > producers_table;
-   typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
 
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
-   typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -174,23 +153,16 @@ namespace eosiosystem {
          voters_table            _voters;
          producer_pay_table      _producer_pay;
          producers_table         _producers;
-         producers_table2        _producers2;
          global_state_singleton  _global;
-         global_state3_singleton _global3;
          eosio_global_state      _gstate;
-         eosio_global_state3     _gstate3;
          rammarket               _rammarket;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
          static constexpr eosio::name token_account{"eosio.token"_n};
-         static constexpr eosio::name ram_account{"eosio.ram"_n};
-         static constexpr eosio::name ramfee_account{"eosio.ramfee"_n};
          static constexpr eosio::name usage_account{"eosio.usage"_n};
          static constexpr eosio::name stake_account{"eosio.stake"_n};
          static constexpr eosio::name ppay_account{"eosio.ppay"_n};
-         static constexpr eosio::name vpay_account{"eosio.vpay"_n};
-         static constexpr eosio::name names_account{"eosio.names"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
@@ -348,9 +320,6 @@ namespace eosiosystem {
          void update_producers( block_timestamp timestamp );
 
          // defined in voting.cpp
-         double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
-                                               time_point ct,
-                                               double shares_rate, bool reset_to_zero = false );
          double update_total_votepay_share( time_point ct,
                                             double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
    };
