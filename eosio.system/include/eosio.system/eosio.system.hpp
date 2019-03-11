@@ -81,6 +81,7 @@ namespace eosiosystem {
       uint16_t              location = 0;
 
       uint64_t primary_key()const { return owner.value;                             }
+      double   by_location()const { return (double)location;                        }
       bool     active()const      { return is_active;                               }
       void     deactivate()       { producer_key = public_key(); is_active = false; }
 
@@ -141,7 +142,9 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
 
-   typedef eosio::multi_index< "producers"_n, producer_info > producers_table;
+   typedef eosio::multi_index< "producers"_n, producer_info,
+                               indexed_by<"prolocation"_n, const_mem_fun<producer_info, double, &producer_info::by_location>  >   
+                               > producers_table;
 
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
 
