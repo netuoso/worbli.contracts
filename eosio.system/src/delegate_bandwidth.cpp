@@ -107,7 +107,7 @@ namespace eosiosystem {
     *  This action will buy an exact amount of ram and bill the payer the current market price.
     */
    void system_contract::buyrambytes( name payer, name receiver, uint32_t bytes ) {
-      //eosio_assert( payer == "worbli.admin"_n) , "only worbli.admin can purchase RAM" );
+      eosio_assert( payer == "worbli.admin"_n || payer == _self , "only worbli.admin or eosio can purchase RAM" );
       const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
       const uint64_t token_precision = token_supply.symbol.precision();
       const uint64_t bytes_per_token = uint64_t((_gstate.max_ram_size / (double)token_supply.amount) * pow(10,token_precision));
@@ -120,7 +120,7 @@ namespace eosiosystem {
 
   void system_contract::buyram( name payer, name receiver, asset quant ) {
       require_auth( payer );
-      //eosio_assert( payer == "worbli.admin"_n) , "only worbli.admin can purchase RAM" );
+      eosio_assert( payer == "worbli.admin"_n || _self , "only worbli.admin or eosio can purchase RAM" );
       eosio_assert( quant.symbol == core_symbol(), "must buy ram with core token" );
       eosio_assert( quant.amount > 0, "must purchase a positive amount" );
 
@@ -223,11 +223,19 @@ namespace eosiosystem {
       eosio_assert( bytes > 0, "cannot sell negative byte" );
       int64_t delegated_ram_bytes = 0;
 
-      del_ram_table  delram( _self, "worbli.admin"_n.value );
-      auto ram_itr = delram.find( account.value );
+      // lookup delegated from worbli.admin
+      del_ram_table  delram_admin( _self, "worbli.admin"_n.value );
+      auto ram_itr = delram_admin.find( account.value );
 
-      if(ram_itr != delram.end())
-            delegated_ram_bytes = ram_itr->ram_bytes;
+      if(ram_itr != delram_admin.end())
+            delegated_ram_bytes += ram_itr->ram_bytes;
+
+      // lookup delegated from eosio
+      del_ram_table  delram_eosio( _self, _self.value );
+      ram_itr = delram_eosio.find( account.value );
+
+      if(ram_itr != delram_eosio.end())
+            delegated_ram_bytes += ram_itr->ram_bytes;
 
       user_resources_table  userres( _self, account.value );
       auto res_itr = userres.find( account.value );
