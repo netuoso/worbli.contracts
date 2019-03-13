@@ -527,7 +527,8 @@ namespace eosiosystem {
    void system_contract::delegateram( name from, name receiver,
                                      int64_t bytes )
    {
-      require_auth( "worbli.admin"_n );
+      eosio_assert( from == "worbli.admin"_n || from == _self, "action restricted to worbli.admin and create accounts" );
+      require_auth( from );
       eosio_assert( bytes >= 0, "must delegate a positive amount" );
 
       const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );

@@ -275,7 +275,8 @@ namespace eosiosystem {
                             ignore<authority> owner,
                             ignore<authority> active ) {
 
-      eosio_assert( creator == "worbli.admin"_n || creator == _self, "producer not found" );
+      eosio_assert( creator == "worbli.admin"_n || creator == _self, "action restricted to worbli.admin and create accounts" );
+      require_auth( creator );
       if( creator != "worbli.admin"_n && creator != _self) {
          uint64_t tmp = newact.value >> 4;
          bool has_dot = false;
