@@ -3101,7 +3101,7 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    rlm.get_account_limits( N(alice1111111), ram_bytes_after_unstake, net_weight, cpu_weight );
    BOOST_REQUIRE_EQUAL( ram_bytes_orig, ram_bytes_after_unstake );
 
-   uint64_t ram_gift = 1400;
+   uint64_t ram_gift = 0;
 
    int64_t ram_bytes;
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_sym::from_string("1000.0000") ) );
@@ -3285,7 +3285,7 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
       ("cpu_weight", core_sym::from_string("0.0000"))
-      ("ram_stake", core_sym::from_string("19518.6323"))
+      ("ram_stake", core_sym::from_string("19650.7941"))
       ("ram_bytes",  total_res["ram_bytes"].as_int64() )
    );
 

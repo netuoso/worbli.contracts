@@ -29,7 +29,7 @@ namespace eosiosystem {
    using std::pair;
 
    static constexpr uint32_t refund_delay_sec = 3*24*3600;
-   static constexpr int64_t  ram_gift_bytes = 1400;
+   static constexpr int64_t  ram_gift_bytes = 0;
 
    struct [[eosio::table, eosio::contract("eosio.system")]] user_resources {
       name          owner;
