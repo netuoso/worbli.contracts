@@ -299,6 +299,8 @@ namespace eosiosystem {
                   r.owner = account;
                   r.ram_amount = ram_balance;
                   r.ram_bytes = bytes;
+                  r.cpu_amount = asset( 0, core_symbol() );
+                  r.net_amount = asset( 0, core_symbol() );
                   r.request_time = current_time_point();
                });
                need_deferred_trx = true;
@@ -468,6 +470,8 @@ namespace eosiosystem {
                   } else {
                      r.cpu_amount = asset( 0, core_symbol() );
                   }
+                  r.ram_amount = asset( 0, core_symbol() );
+                  r.ram_bytes = 0;
                   r.request_time = current_time_point();
                });
                need_deferred_trx = true;
