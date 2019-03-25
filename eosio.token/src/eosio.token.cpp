@@ -110,6 +110,114 @@ void token::transfer( name    from,
     add_balance( to, quantity, payer );
 }
 
+void token::transferfrom( name from,
+                          name to,
+                          name spender,
+                          asset quantity,
+                          string memo)
+{
+    eosio_assert(from != to, "cannot transfer to self");
+    eosio_assert(is_account(from), "from account does not exist");
+    eosio_assert(is_account(to), "to account does not exist");
+
+    auto sym = quantity.symbol.code();
+    stats statstable( _self, sym.raw() );
+    const auto &st = statstable.get( sym.raw() );
+
+    // Notify both the sender and receiver upon action completion
+    require_recipient(from);
+    require_recipient(to);
+
+    eosio_assert(quantity.is_valid(), "invalid quantity");
+    eosio_assert(quantity.amount > 0, "must transfer positive quantity");
+    eosio_assert(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
+    eosio_assert(memo.size() <= 256, "memo has more than 256 bytes");
+
+    allowed allowedtable(_self, from.value);
+    auto existing = allowedtable.find( spender.value + sym.raw() ); //Find returns an iterator pointing to the found object
+    eosio_assert(existing != allowedtable.end(), "spender not allowed");
+    const auto &at = *existing;
+
+    require_auth(at.spender);
+    eosio_assert(at.quantity.is_valid(), "invalid allowed quantity");
+    eosio_assert(at.quantity.amount > 0, "allowed must be a positive quantity");
+    eosio_assert(at.quantity.symbol == st.supply.symbol, "symbol precision mismatch");
+    eosio_assert(at.quantity.amount >= quantity.amount, "Allowed quantity < Transfer Quantity");
+
+    sub_balancefrom(from, at.spender, quantity);
+    add_balance(to, quantity, spender);
+
+    // Now modify the allowed table to reflect the transaction.
+    // If the whole allowed amount is transfered, delete the table entry.
+    // Else, simply modify the amount.
+    if (at.quantity.amount == quantity.amount)
+    {
+        allowedtable.erase(at);
+    }
+    else
+    {
+        allowedtable.modify(at, at.spender, [&](auto &a) {
+            a.quantity -= quantity;
+        });
+    }
+}
+
+void token::approve(name owner,
+                         name spender,
+                         asset quantity)
+{
+    eosio_assert(owner != spender, "cannot allow self");
+
+    require_auth(owner);
+    eosio_assert(is_account(spender), "spender account does not exist");
+
+    auto sym = quantity.symbol.code();
+    stats statstable(_self, sym.raw() );
+    const auto &st = statstable.get( sym.raw() );
+
+    // Notify both the sender and receiver upon action completion
+    require_recipient(owner);
+    require_recipient(spender);
+
+    eosio_assert(quantity.is_valid(), "invalid quantity");
+    eosio_assert(quantity.amount >= 0, "must transfer positive quantity");
+    eosio_assert(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
+
+    // Making changes to allowed in owner scope
+    allowed allowedtable(_self, owner.value);
+    auto existing = allowedtable.find(spender.value + sym.raw()); //Find returns an iterator pointing to the found object
+    const auto &at = *existing;
+    if (existing == allowedtable.end())
+    {
+        if (quantity.amount == 0)
+        {
+            eosio_assert(false, "No allowance found: zero amount only permitted to erase existing allowances");
+        }
+        else
+        {
+            allowedtable.emplace(owner, [&](auto &a) {
+                a.key = spender.value + sym.raw();
+                a.spender = spender;
+                a.quantity = quantity;
+            });
+        }
+    }
+    else
+    {
+        if (quantity.amount == 0)
+        {
+            allowedtable.erase(at);
+        }
+        else
+        {
+
+            allowedtable.modify(at, owner, [&](auto &a) {
+                a.quantity = quantity;
+            });
+        }
+    }
+}
+
 void token::sub_balance( name owner, asset value ) {
    accounts from_acnts( _self, owner.value );
 
@@ -118,6 +226,18 @@ void token::sub_balance( name owner, asset value ) {
 
    from_acnts.modify( from, owner, [&]( auto& a ) {
          a.balance -= value;
+      });
+}
+
+void token::sub_balancefrom(name owner, name spender, asset value)
+{
+    accounts from_acnts(_self, owner.value);
+
+    const auto &from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
+    eosio_assert(from.balance.amount >= value.amount, "overdrawn balance");
+
+    from_acnts.modify(from, spender, [&](auto &a) {
+          a.balance -= value;
       });
 }
 
