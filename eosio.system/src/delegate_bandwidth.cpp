@@ -244,7 +244,7 @@ namespace eosiosystem {
        
       asset tokens_out;
       int64_t ram_bytes = res_itr->ram_bytes;
-      float_t token_per_bytes = res_itr->ram_stake.amount / (float_t)(ram_bytes - delegated_ram_bytes);
+      float_t token_per_bytes = res_itr->ram_stake.amount / (float_t)(ram_bytes);
       int64_t tokens = token_per_bytes * bytes;
 
       tokens_out = asset(tokens, core_symbol());
