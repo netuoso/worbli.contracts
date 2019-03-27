@@ -3058,14 +3058,14 @@ BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( true, get_row_by_account( N(eosio.token), N(alice1111111), N(accounts), symbol{CORE_SYM}.to_symbol_code() ).empty() );
 
    auto rlm = control->get_resource_limits_manager();
-   auto eosioram_ram_usage = rlm.get_account_ram_usage(N(eosio.ram));
+   //auto eosioram_ram_usage = rlm.get_account_ram_usage(N(eosio.ram));
    auto alice_ram_usage = rlm.get_account_ram_usage(N(alice1111111));
 
    BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 2048 ) );
 
    //make sure that ram was billed to alice, not to eosio.ram
    BOOST_REQUIRE_EQUAL( true, alice_ram_usage < rlm.get_account_ram_usage(N(alice1111111)) );
-   BOOST_REQUIRE_EQUAL( eosioram_ram_usage, rlm.get_account_ram_usage(N(eosio.ram)) );
+   //BOOST_REQUIRE_EQUAL( eosioram_ram_usage, rlm.get_account_ram_usage(N(eosio.ram)) );
 
 } FC_LOG_AND_RETHROW()
 
