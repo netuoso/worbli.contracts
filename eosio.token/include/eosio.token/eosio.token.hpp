@@ -38,6 +38,18 @@ namespace eosio {
                         string  memo );
 
          [[eosio::action]]
+         void transferfrom( name from,
+                            name to,
+                            name spender,
+                            asset quantity,
+                            string memo);
+
+         [[eosio::action]]
+         void approve( name owner,
+                       name spender,
+                       asset quantity);
+
+         [[eosio::action]]
          void open( name owner, const symbol& symbol, name ram_payer );
 
          [[eosio::action]]
@@ -72,10 +84,21 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
+         struct [[eosio::table]] allowed_struct {
+            uint64_t key;
+            name spender;
+            asset quantity;
+
+            uint64_t primary_key() const { return key; }
+         };
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+         typedef eosio::multi_index< "allowed"_n, allowed_struct> allowed;
 
+         void sub_balancefrom(name owner, name spender, asset value);
          void sub_balance( name owner, asset value );
+         void add_balancefrom(name owner, name spender, asset value);
          void add_balance( name owner, asset value, name ram_payer );
    };
 
