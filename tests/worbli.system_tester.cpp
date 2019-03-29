@@ -23,7 +23,8 @@ public:
    void basic_setup() {
       produce_blocks( 2 );
 
-      create_accounts({ N(worbli.admin), N(eosio.token), N(eosio.stake) });
+      create_accounts({ N(worbli.admin), N(eosio.token), N(eosio.stake), N(eosio.usage),
+                        N(eosio.saving), N(eosio.ppay)});
 
       produce_blocks( 100 );
       set_code( N(eosio.token), contracts::token_wasm());
@@ -122,6 +123,11 @@ public:
       return data.empty() ? asset(0, balance_symbol) : token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
    }
 
+   fc::variant get_prodpay( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(prodpay), act );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("producer_pay", data, abi_serializer_max_time);
+   }
+
    fc::variant get_stats( const string& symbolname )
    {
       auto symb = eosio::chain::symbol::from_string(symbolname);
@@ -136,6 +142,28 @@ public:
       auto symbol_code = symb.to_symbol_code().value;
       vector<char> data = get_row_by_account( N(eosio.token), acc, N(accounts), symbol_code );
       return data.empty() ? fc::variant() : token_abi_ser.binary_to_variant( "account", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_delegated_ram( const account_name& from, const account_name& to ) {
+      vector<char> data = get_row_by_account( config::system_account_name, from, N(delram), to );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "delegated_ram", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_total_stake( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, act, N(userres), act );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "user_resources", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_global_state() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global), N(global) );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_rammarket(symbol balance_symbol = symbol{CORE_SYM}) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rammarket), balance_symbol.value() );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "exchange_state", data, abi_serializer_max_time );
    }
 
    action_result create( account_name issuer,
@@ -272,20 +300,10 @@ public:
       return push_transaction( trx );
    }
 
-   fc::variant get_delegated_ram( const account_name& from, const account_name& to ) {
-      vector<char> data = get_row_by_account( config::system_account_name, from, N(delram), to );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "delegated_ram", data, abi_serializer_max_time );
-   }
-
-   fc::variant get_total_stake( const account_name& act ) {
-      vector<char> data = get_row_by_account( config::system_account_name, act, N(userres), act );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "user_resources", data, abi_serializer_max_time );
-   }
-
-   fc::variant get_global_state() {
-      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global), N(global) );
-      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state", data, abi_serializer_max_time );
+   action_result claimrewards( const account_name account ) {
+      return push_system_action( account, N(claimrewards), mvo()
+           ( "owner", account)
+      );
    }
 
    action_result sellram( const account_name account, uint64_t numbytes ) {
@@ -311,6 +329,12 @@ public:
       );
    }
 
+   action_result rmvproducer( const account_name producer ) {
+      return push_system_action( N(worbli.admin), N(rmvproducer), mvo()
+           ("producer", producer)
+      );
+   }
+
    action_result addprod( const account_name producer ) {
       return push_system_action( N(worbli.admin), N(addproducer), mvo()
            ("producer", producer)
@@ -326,9 +350,21 @@ public:
       );
    }
 
+   action_result unregprod( const account_name producer ) {
+      return push_system_action( producer, N(unregprod), mvo()
+           ("producer", producer)
+      );
+   }
+
    action_result activate() {
       return push_system_action( N(eosio), N(togglesched), mvo()
            ("is_active", 1)
+      );
+   }
+
+   action_result setram(uint64_t max_ram_size) {
+      return push_system_action( N(eosio), N(setram), mvo()
+           ("max_ram_size", max_ram_size)
       );
    }
 
@@ -362,7 +398,6 @@ BOOST_FIXTURE_TEST_CASE( delegate_ram_tests, worbli_system_tester ) try {
       BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance("eosio"));
 
       auto delram = get_delegated_ram( N(eosio), N(test1) );
-      std::cout << delram << std::endl; 
 
       REQUIRE_MATCHING_OBJECT( get_total_stake(N(test1)), mvo()
          ("owner", "test1")
@@ -398,9 +433,9 @@ BOOST_FIXTURE_TEST_CASE( delegate_ram_tests, worbli_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+// can remove after new contract is deployed
 BOOST_FIXTURE_TEST_CASE( update_system_contract, worbli_system_tester ) try {
       worbli_system_tester t(worbli_system_tester::setup_level::deploy_legacy_contract);
-      std::cout << "fucky" << endl;
       vector<account_name> producers = {N(prod1), N(prod2), N(prod3), N(prod4),
                                       N(prod5), N(prod11), N(prod12), N(prod13),
                                       N(prod14), N(prod15), N(prod21), N(prod22),
@@ -421,21 +456,155 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract, worbli_system_tester ) try {
       auto producer_keys = t.control->head_block_state()->active_schedule.producers;
       BOOST_REQUIRE_EQUAL( "prod1", producer_keys[0].producer_name);
       
-      t.create_free_account_with_resources(N(test1), N(worbli.admin));
-      
-      std::cout << t.get_total_stake(N(test1)) << endl;
+      t.create_free_account_with_resources(N(test1), N(worbli.admin));  
+
+      auto legacy_ram_stake = t.get_total_stake(N(test1))["ram_stake"];
 
       t.deploy_contract(true, "4,WBI");
+      t.produce_blocks(1000); 
+ 
+      t.create_free_account_with_resources(N(test2), N(worbli.admin));      
+      auto new_ram_stake = t.get_total_stake(N(test1))["ram_stake"];
 
-      t.produce_block(); 
-      t.produce_block( fc::days(7) );    
-      t.deploy_legacy_contract(); 
-      t.produce_block(); 
-      t.deploy_contract(false, "4,WBI");
+      BOOST_REQUIRE_EQUAL( legacy_ram_stake, new_ram_stake);
 
-      t.produce_block(); 
-      t.produce_block( fc::days(7) ); 
+      BOOST_REQUIRE_EQUAL( success(), t.unregprod(N(prod1)));
+      t.produce_blocks(1200);
+
+      producer_keys = t.control->head_block_state()->active_schedule.producers;
+      BOOST_REQUIRE_EQUAL( "prod11", producer_keys[0].producer_name);
+
+      BOOST_REQUIRE_EQUAL( success(), t.regprod(N(prod1)));
+      t.produce_blocks(1200);
+
+      producer_keys = t.control->head_block_state()->active_schedule.producers;
+      BOOST_REQUIRE_EQUAL( "prod1", producer_keys[0].producer_name);      
+
+} FC_LOG_AND_RETHROW()
+
+// can remove after new contract is deployed
+BOOST_FIXTURE_TEST_CASE( update_inflation_producer_pay, worbli_system_tester ) try {
       
+      // setup legacy tester
+      worbli_system_tester t(worbli_system_tester::setup_level::deploy_legacy_contract);
+      vector<account_name> producers = {N(prod1), N(prod2), N(prod3), N(prod4),
+                                      N(prod5), N(prod11), N(prod12), N(prod13),
+                                      N(prod14), N(prod15), N(prod21), N(prod22),
+                                      N(prod23), N(prod24), N(prod25), N(prod31),
+                                      N(prod32), N(prod33), N(prod34), N(prod35),
+                                      N(prod41)};
+
+      t.create_accounts_with_resources(producers, N(worbli.admin));
+
+      for( auto p : producers ) {
+         BOOST_REQUIRE_EQUAL( success(), t.addprod( p ));
+         BOOST_REQUIRE_EQUAL( success(), t.regprod( p ));
+      }
+
+      BOOST_REQUIRE_EQUAL( success(), t.activate());
+      BOOST_REQUIRE_EQUAL( success(), t.setram(68719476736));
+      t.produce_blocks(1000);
+      
+      auto producer_keys = t.control->head_block_state()->active_schedule.producers;
+      BOOST_REQUIRE_EQUAL( "prod1", producer_keys[0].producer_name);
+
+      BOOST_REQUIRE( bool(t.create_free_account_with_resources(N(test1), N(worbli.admin))));
+      auto legacy_ram_stake = t.get_total_stake(N(test1))["ram_stake"].as<asset>().get_amount();
+
+      // setup new tester
+      create_accounts_with_resources(producers, N(worbli.admin));
+
+      for( auto p : producers ) {
+         BOOST_REQUIRE_EQUAL( success(), addprod( p ));
+         BOOST_REQUIRE_EQUAL( success(), regprod( p ));
+      }
+      BOOST_REQUIRE_EQUAL( success(), activate());
+      BOOST_REQUIRE( bool(create_free_account_with_resources(N(test2), N(worbli.admin))));
+
+      produce_blocks(1001);
+      
+      BOOST_REQUIRE( !is_same_chain(t) );
+      // trigger inflation calculaiton for both chains      
+      produce_blocks( 200 );
+      produce_block( fc::days(1) );
+
+      t.produce_blocks( 200 );
+      t.produce_block( fc::days(1) );
+
+      producer_keys = control->head_block_state()->active_schedule.producers;
+      BOOST_REQUIRE_EQUAL( "prod1", producer_keys[0].producer_name);   
+
+      auto new_ram_stake = get_total_stake(N(test2))["ram_stake"].as<asset>().get_amount();   
+      BOOST_REQUIRE_EQUAL( legacy_ram_stake, new_ram_stake);
+
+      // test inflation calculations
+      BOOST_REQUIRE( get_balance(N(eosio.usage)).get_amount() > 0 );
+      BOOST_REQUIRE_EQUAL( get_balance(N(eosio.usage)).get_amount(), 
+                           t.get_balance(N(eosio.usage), symbol(4,"WBI")).get_amount());
+
+      BOOST_REQUIRE( get_balance(N(eosio.saving)).get_amount() > 0 );
+      BOOST_REQUIRE_EQUAL( get_balance(N(eosio.saving)).get_amount(), 
+                           t.get_balance(N(eosio.saving), symbol(4,"WBI")).get_amount());
+
+      BOOST_REQUIRE( get_balance(N(eosio.ppay)).get_amount() > 0 );
+      BOOST_REQUIRE_EQUAL( get_balance(N(eosio.ppay)).get_amount(), 
+                           t.get_balance(N(eosio.ppay), symbol(4,"WBI")).get_amount());
+
+
+      // test producer pay
+      BOOST_REQUIRE_EQUAL( success(), claimrewards(N(prod1)));
+      BOOST_REQUIRE_EQUAL(wasm_assert_msg( "producer pay request not found" ),
+                          claimrewards(N(prod1)));
+
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( test_fix_list_producers, worbli_system_tester ) try {
+      worbli_system_tester t(worbli_system_tester::setup_level::deploy_legacy_contract);
+      vector<account_name> producers = {N(prod1), N(prod2), N(prod3), N(prod4),
+                                      N(prod5), N(prod11), N(prod12), N(prod13),
+                                      N(prod14), N(prod15), N(prod21), N(prod22),
+                                      N(prod23), N(prod24), N(prod25), N(prod31),
+                                      N(prod32), N(prod33), N(prod34), N(prod35),
+                                      N(prod41)};
+
+      // setup legacy system contract
+      t.create_accounts_with_resources(producers, N(worbli.admin));
+
+      for( auto p : producers ) {
+         BOOST_REQUIRE_EQUAL( success(), t.addprod( p ));
+         BOOST_REQUIRE_EQUAL( success(), t.regprod( p ));
+      }
+
+      BOOST_REQUIRE_EQUAL( success(), t.activate());
+      t.produce_blocks(1000);
+      
+      auto producer_keys = t.control->head_block_state()->active_schedule.producers;
+      BOOST_REQUIRE_EQUAL( "prod1", producer_keys[0].producer_name);
+       
+      // deploy new contract
+      t.deploy_contract(true, "4,WBI");
+      t.produce_blocks(1000); 
+
+      //remove and add producers to populate secondary index
+      for( auto p : producers ) {
+         BOOST_REQUIRE_EQUAL( success(), t.unregprod( p ));
+         BOOST_REQUIRE_EQUAL( success(), t.rmvproducer( p ));
+         BOOST_REQUIRE_EQUAL( success(), t.addprod( p ));
+         BOOST_REQUIRE_EQUAL( success(), t.regprod( p ));
+      }     
+
+      BOOST_REQUIRE_EQUAL( success(), t.unregprod(N(prod1)));
+      t.produce_blocks(1200);
+
+      producer_keys = t.control->head_block_state()->active_schedule.producers;
+      BOOST_REQUIRE_EQUAL( "prod11", producer_keys[0].producer_name);
+
+      BOOST_REQUIRE_EQUAL( success(), t.regprod(N(prod1)));
+      t.produce_blocks(1200);
+
+      producer_keys = t.control->head_block_state()->active_schedule.producers;
+      BOOST_REQUIRE_EQUAL( "prod1", producer_keys[0].producer_name);
 
 } FC_LOG_AND_RETHROW()
 

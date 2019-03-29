@@ -1565,12 +1565,12 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
       BOOST_REQUIRE( info["is_active"].as<bool>() );
       BOOST_REQUIRE( fc::crypto::public_key() != fc::crypto::public_key(info["producer_key"].as_string()) );
 
-      BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
+      BOOST_REQUIRE_EQUAL( error("missing authority of worbli.admin"),
                            push_action(prod_name, N(rmvproducer), mvo()("producer", prod_name)));
-      BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
+      BOOST_REQUIRE_EQUAL( error("missing authority of worbli.admin"),
                            push_action(producer_names[rmv_index + 2], N(rmvproducer), mvo()("producer", prod_name) ) );
       BOOST_REQUIRE_EQUAL( success(),
-                           push_action(config::system_account_name, N(rmvproducer), mvo()("producer", prod_name) ) );
+                           push_action(N(worbli.admin), N(rmvproducer), mvo()("producer", prod_name) ) );
 
       produce_blocks(3 * 21 * 12);
       BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer not found"),
@@ -1586,7 +1586,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
 
    {
       BOOST_REQUIRE_EQUAL( wasm_assert_msg("producer not found"),
-                           push_action( config::system_account_name, N(rmvproducer), mvo()("producer", "nonexistingp") ) );
+                           push_action( N(worbli.admin), N(rmvproducer), mvo()("producer", "nonexistingp") ) );
    }
 
 } FC_LOG_AND_RETHROW()
@@ -3285,7 +3285,7 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
       ("cpu_weight", core_sym::from_string("0.0000"))
-      ("ram_stake", core_sym::from_string("19765.4852"))
+      ("ram_stake", core_sym::from_string("19765.8088"))
       ("ram_bytes",  total_res["ram_bytes"].as_int64() )
    );
 
