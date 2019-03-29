@@ -243,7 +243,7 @@ namespace eosiosystem {
    }
 
    void system_contract::rmvproducer( name producer ) {
-      require_auth( _self );
+      require_auth( "worbli.admin"_n );
       auto prod = _producers.find( producer.value );
       eosio_assert( prod != _producers.end(), "producer not found" );
       _producers.erase( prod );

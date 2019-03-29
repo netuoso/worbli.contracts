@@ -35,9 +35,9 @@ public:
    void basic_setup() {
       produce_blocks( 2 );
 
-      create_accounts({ N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
-               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(worbli.admin),
-               N(eosio.usage), N(eosio.ppay) });
+      create_accounts({ N(eosio.token), N(eosio.stake), N(eosio.saving), 
+                        N(eosio.names), N(worbli.admin),N(eosio.usage), 
+                        N(eosio.ppay) });
 
 
       produce_blocks( 100 );
