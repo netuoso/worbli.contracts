@@ -165,6 +165,47 @@ void token::close( name owner, const symbol& symbol )
    acnts.erase( it );
 }
 
+void token::setcntlr( const symbol& symbol, name controller )
+{
+    stats statstable( _self, symbol.code().raw() );
+    auto existing = statstable.find( symbol.code().raw() );
+    eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before setting controller" );
+    const auto& st = *existing;
+
+    require_auth( st.issuer );
+    // verify controller is a contract
+
+    controllers controllers( _self, symbol.code().raw() );
+    auto c_itr = controllers.upper_bound(0);
+
+    if( c_itr != controllers.end() ) {
+       controllers.erase( c_itr );
+    }
+
+    controllers.emplace( _self, [&]( auto& c ) {
+       c.token = symbol;
+       c.controller = controller;
+    });
+}
+
+void token::unsetcntlr( const symbol& symbol )
+{
+    stats statstable( _self, symbol.code().raw() );
+    auto existing = statstable.find( symbol.code().raw() );
+    eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before setting controller" );
+    const auto& st = *existing;
+
+    require_auth( st.issuer );
+    // verify controller is a contract
+
+    controllers controllers( _self, symbol.code().raw() );
+    auto c_itr = controllers.upper_bound(0);
+
+    if( c_itr != controllers.end() ) {
+       controllers.erase( c_itr );
+    }
+}
+
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(setcntlr)(unsetcntlr) )

@@ -19,6 +19,21 @@ namespace eosio {
 
    class [[eosio::contract("eosio.token")]] token : public contract {
       public:
+
+         struct [[eosio::table]] requirement {
+            symbol   token;
+            name     controller;
+
+            uint64_t primary_key()const { return token.code().raw(); }
+         };
+
+         struct [[eosio::table]] entry {
+            name         registry;
+            requirement  requirement;
+
+            uint64_t primary_key()const { return registry.value; }
+         }; 
+
          using contract::contract;
 
          [[eosio::action]]
@@ -42,6 +57,12 @@ namespace eosio {
 
          [[eosio::action]]
          void close( name owner, const symbol& symbol );
+
+         [[eosio::action]]
+         void setcntlr( const symbol& symbol, name controller );
+
+         [[eosio::action]]
+         void unsetcntlr( const symbol& symbol );
 
          static asset get_supply( name token_contract_account, symbol_code sym_code )
          {
@@ -72,8 +93,16 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
+         struct [[eosio::table]] controller {
+            symbol   token;
+            name     controller;
+
+            uint64_t primary_key()const { return token.code().raw(); }
+         };    
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+         typedef eosio::multi_index< "controllers"_n, controller > controllers;
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );

@@ -35,6 +35,7 @@ add_subdirectory(eosio.msig)
 add_subdirectory(eosio.wrap)
 add_subdirectory(eosio.system)
 add_subdirectory(eosio.token)
+add_subdirectory(verified.token)
 add_subdirectory(worblitimelock)
 
 if (APPLE)
