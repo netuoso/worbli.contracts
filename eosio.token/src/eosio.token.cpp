@@ -4,6 +4,7 @@
  */
 
 #include <eosio.token/eosio.token.hpp>
+#include <eosiolib/print.hpp>
 
 namespace eosio {
 
@@ -89,6 +90,7 @@ void token::transfer( name    from,
                       asset   quantity,
                       string  memo )
 {
+    is_transfer_allowed( from, to, quantity );
     eosio_assert( from != to, "cannot transfer to self" );
     require_auth( from );
     eosio_assert( is_account( to ), "to account does not exist");
@@ -175,7 +177,7 @@ void token::setcntlr( const symbol& symbol, name controller )
     require_auth( st.issuer );
     // verify controller is a contract
 
-    controllers controllers( _self, symbol.code().raw() );
+    controller_table controllers( _self, symbol.code().raw() );
     auto c_itr = controllers.upper_bound(0);
 
     if( c_itr != controllers.end() ) {
@@ -198,12 +200,34 @@ void token::unsetcntlr( const symbol& symbol )
     require_auth( st.issuer );
     // verify controller is a contract
 
-    controllers controllers( _self, symbol.code().raw() );
+    controller_table controllers( _self, symbol.code().raw() );
     auto c_itr = controllers.upper_bound(0);
 
     if( c_itr != controllers.end() ) {
        controllers.erase( c_itr );
     }
+}
+
+void token::is_transfer_allowed( name from, name to, asset quantity ) {
+   controller_table controllertable( _self, quantity.symbol.code().raw() );
+   auto ctrlitr = controllertable.find( quantity.symbol.code().raw() );
+   eosio_assert( ctrlitr != controllertable.end(), "controller for symbol does not exist in database" );
+   print("controller: ", ctrlitr->controller);
+
+   receivereqs_table receivereqstable( ctrlitr->controller, quantity.symbol.code().raw() );
+   sendreqs_table sendreqstable( ctrlitr->controller, quantity.symbol.code().raw() );
+   for( const auto& req : receivereqstable ) {
+      print("requirement: ", req.key);
+   }
+
+   // lookup registries table in controller scope
+   registry_table registries( ctrlitr->controller, quantity.symbol.code().raw() );
+   //auto regitr = registrytable.find( quantity.symbol.code().raw() );
+   for( const auto& reg : registries ) {
+      print("registry: ", reg.registry);
+   }
+
+   //eosio_assert(false, "Transfer not allowed");
 }
 
 } /// namespace eosio

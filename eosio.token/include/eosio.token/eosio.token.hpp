@@ -6,6 +6,7 @@
 
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
+#include <eosio.token/registered.token.hpp>
 
 #include <string>
 
@@ -13,26 +14,17 @@ namespace eosiosystem {
    class system_contract;
 }
 
+// regulated token structs
+using registeredtoken::controller;
+using registeredtoken::registry;
+using registeredtoken::requirement;
+
 namespace eosio {
 
    using std::string;
 
    class [[eosio::contract("eosio.token")]] token : public contract {
       public:
-
-         struct [[eosio::table]] requirement {
-            symbol   token;
-            name     controller;
-
-            uint64_t primary_key()const { return token.code().raw(); }
-         };
-
-         struct [[eosio::table]] entry {
-            name         registry;
-            requirement  requirement;
-
-            uint64_t primary_key()const { return registry.value; }
-         }; 
 
          using contract::contract;
 
@@ -93,19 +85,22 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
-         struct [[eosio::table]] controller {
-            symbol   token;
-            name     controller;
-
-            uint64_t primary_key()const { return token.code().raw(); }
-         };    
-
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
-         typedef eosio::multi_index< "controllers"_n, controller > controllers;
+
+         // regulated token structs
+         struct [[eosio::table("controller")]] : controller{};
+         typedef eosio::multi_index< "controller"_n, controller > controller_table;
+
+         typedef eosio::multi_index< "registries"_n, registry > registry_table;
+
+         typedef eosio::multi_index< "receivereqs"_n, requirement> receivereqs_table;
+         typedef eosio::multi_index< "sendreqs"_n, requirement> sendreqs_table;
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
+         void is_transfer_allowed( name from, name to, asset quantity );
+         void is_verified( name address );
    };
 
 } /// namespace eosio
