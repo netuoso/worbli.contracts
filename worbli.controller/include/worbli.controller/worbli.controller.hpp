@@ -1,61 +1,69 @@
 #include <eosiolib/eosio.hpp>
-#include <eosio.token/registered.token.hpp>
+#include <eosiolib/asset.hpp>
 
 using namespace eosio;       
 
-using registeredtoken::requirement;
-using registeredtoken::registry;
+namespace registeredtoken {
 
+    class [[eosio::contract("worbli.controller")]] worblicontroller : public eosio::contract {
+        public:
 
-class [[eosio::contract("worbli.controller")]] worblicontroller : public eosio::contract {
-    public:
-      worblicontroller( name self, name code, datastream<const char*> ds )
-      :contract(self, code, ds),
-        _sendreqs(self, self.value),
-        _registries(self, self.value)
-      {  }
+            using contract::contract; 
 
-        using contract::contract; 
+            [[eosio::action]]
+            void addsendreq( symbol_code sym, name key, name value );
 
-        [[eosio::action]]
-        void addsendreq( name key, name value );
+            [[eosio::action]]
+            void delsendreq( symbol_code sym, name key, name value );
 
-        [[eosio::action]]
-        void delsendreq( name key, name value );
+            [[eosio::action]]
+            void addrcvreq( symbol_code sym, name key, name value );
 
-        [[eosio::action]]
-        void addrcvreq( symbol_code sym, name key, name value );
+            [[eosio::action]]
+            void delrcvreq( symbol_code sym, name key, name value );
 
-        [[eosio::action]]
-        void delrcvreq( symbol_code sym, name key, name value );
+            [[eosio::action]]
+            void addregistry(symbol_code sym, name registry);
 
-        [[eosio::action]]
-        void addregistry(name registry);
+            [[eosio::action]]
+            void delregistry(symbol_code sym, name registry);
 
-        [[eosio::action]]
-        void delregistry(name registry);
+        private:
 
-    private:
+            struct currency_stats {
+                asset    supply;
+                asset    max_supply;
+                name     issuer;
 
-         struct [[eosio::table]] currency_stats {
-            asset    supply;
-            asset    max_supply;
-            name     issuer;
+                uint64_t primary_key()const { return supply.symbol.code().raw(); }
+            };
 
-            uint64_t primary_key()const { return supply.symbol.code().raw(); }
-         };
+            // struct for registries grant permissions to onchain accounts 
+            struct requirement {
+                name     key;
+                name     value;
 
-        typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+                uint64_t primary_key()const { return key.value; }
+            }; 
 
-        struct [[eosio::table("sendreqs")]] : requirement{};
-        typedef eosio::multi_index< "sendreqs"_n, requirement> sendreqs;
+            // struct for registries grant permissions to onchain accounts 
+            struct [[eosio::table("receivereqs")]] receive_requirement : requirement {}; 
 
-        struct [[eosio::table("receivereqs")]] : requirement{};
-        typedef eosio::multi_index< "receivereqs"_n, requirement> receivereqs;
+            // struct for registries grant permissions to onchain accounts 
+            struct [[eosio::table("sendreqs")]] send_requirement : requirement {}; 
+            
+            struct [[eosio::table]] registries {
+                name         registry;
 
-        struct [[eosio::table("registries")]] : registry{};
-        typedef eosio::multi_index< "registries"_n, registry> registries;
+                uint64_t primary_key()const { return registry.value; }
+            };
 
-        sendreqs _sendreqs;
-        registries _registries;
-};
+            typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+
+            typedef eosio::multi_index< "registries"_n, registries> registry_table;
+            typedef eosio::multi_index< "sendreqs"_n, send_requirement> send_requirements_table;
+            typedef eosio::multi_index< "receivereqs"_n, receive_requirement> receive_requirements_table;
+
+    };
+
+} // namespace registeredtoken

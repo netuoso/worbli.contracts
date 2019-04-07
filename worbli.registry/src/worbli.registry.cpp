@@ -1,11 +1,15 @@
 #include "worbli.registry/worbli.registry.hpp"
 
-void worbliregistry::update(name account, requirement requirement) {
-    require_auth( _self );
-}
+namespace registeredtoken {
 
-void worbliregistry::remove(name account, requirement requirement) {
-    require_auth( _self );
-}
+    void worbliregistry::update(name account, requirement requirement) {
+        require_auth( _self );
+    }
 
-EOSIO_DISPATCH( worbliregistry, (update)(remove) )
+    void worbliregistry::remove(name account, requirement requirement) {
+        require_auth( _self );
+    }
+
+    EOSIO_DISPATCH( worbliregistry, (update)(remove) )
+
+}

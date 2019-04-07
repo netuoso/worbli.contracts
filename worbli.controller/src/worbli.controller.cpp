@@ -1,5 +1,7 @@
 #include "worbli.controller/worbli.controller.hpp"
 
+namespace registeredtoken {
+
 void worblicontroller::addrcvreq( symbol_code sym, name key, name value ) {
     require_auth( _self );
 
@@ -7,92 +9,72 @@ void worblicontroller::addrcvreq( symbol_code sym, name key, name value ) {
     auto existing = statstable.find( sym.raw() );
     eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before setting receive requirements" );
 
-    receivereqs receivereqstable(_self, sym.raw());    
+    receive_requirements_table receivereqstable(_self, sym.raw());    
     auto recitr = receivereqstable.find( key.value );
-    
-    if(recitr == receivereqstable.end()) {
-        receivereqstable.emplace(_self, [&]( auto& req ) {
-            req.key = key;
-            req.values.emplace_back(value);
-        });
-    } else {
-        auto valitr = std::find(recitr->values.begin(), recitr->values.end(), value);
-        eosio_assert(valitr == recitr->values.end(), "Requirement already exists");
-        receivereqstable.modify( *recitr, _self, [&]( auto& req ) {
-            req.values.emplace_back(value);
-        });
-    }
-}
 
+    eosio_assert(recitr == receivereqstable.end(), "Requirement already exists");
+
+    receivereqstable.emplace(_self, [&]( auto& req ) {
+        req.key = key;
+        req.value = value;
+    }); 
+}
 
 void worblicontroller::delrcvreq( symbol_code sym, name key, name value ) {
     require_auth( _self );
-    receivereqs receivereqstable(_self, sym.raw());    
+    receive_requirements_table receivereqstable(_self, sym.raw());    
     auto recitr = receivereqstable.find( key.value );
 
     eosio_assert(recitr != receivereqstable.end(), "Requirement does not exist in database");
-    auto valitr = std::find(recitr->values.begin(), recitr->values.end(), value);
-    eosio_assert(valitr != recitr->values.end(), "Requirement value does not exist in database");
-    if(recitr->values.size() > 1) {
-        receivereqstable.modify( *recitr, _self, [&]( auto& req ) {
-            req.values.erase(valitr);
-        });
-    } else {
-         receivereqstable.erase(recitr);
-    }
-
+    receivereqstable.erase(recitr);
 }
 
-void worblicontroller::addsendreq( name key, name value ) {
+void worblicontroller::addsendreq( symbol_code sym, name key, name value ) {
     require_auth( _self );
-    auto senditr = _sendreqs.find(value.value);
-    
-    if(senditr == _sendreqs.end()) {
-        _sendreqs.emplace(_self, [&]( auto& req ) {
-            req.key = key;
-            req.values.emplace_back(value);
-        });
-    } else {
-        auto valitr = std::find(senditr->values.begin(), senditr->values.end(), value);
-        eosio_assert(valitr == senditr->values.end(), "Requirement already exists");
-        _sendreqs.modify( *senditr, _self, [&]( auto& req ) {
-            req.values.emplace_back(value);
-        });
-    }
+    stats statstable( "eosio.token"_n, sym.raw() );
+    auto existing = statstable.find( sym.raw() );
+    eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before setting receive requirements" );
 
+    send_requirements_table sendreqstable(_self, sym.raw());    
+    auto senditr = sendreqstable.find( key.value );
+
+    eosio_assert(senditr == sendreqstable.end(), "Requirement already exists");
+
+    sendreqstable.emplace(_self, [&]( auto& req ) {
+        req.key = key;
+        req.value = value;
+    }); 
 }
 
-void worblicontroller::delsendreq( name key, name value ) {
+void worblicontroller::delsendreq( symbol_code sym, name key, name value ) {
     require_auth( _self );
-    auto senditr = _sendreqs.find(key.value);
-    eosio_assert(senditr != _sendreqs.end(), "Requirement does not exist in database");
-    auto valitr = std::find(senditr->values.begin(), senditr->values.end(), value);
-    eosio_assert(valitr != senditr->values.end(), "Requirement value does not exist in database");
-    if(senditr->values.size() > 1) {
-        _sendreqs.modify( *senditr, _self, [&]( auto& req ) {
-            req.values.erase(valitr);
-        });
-    } else {
-         _sendreqs.erase(senditr);
-    }
 
+    send_requirements_table sendreqstable(_self, sym.raw());    
+    auto senditr = sendreqstable.find( key.value );
+
+    eosio_assert(senditr != sendreqstable.end(), "Requirement does not exist in database");
+    sendreqstable.erase(senditr);
 }
 
-void worblicontroller::addregistry(name registry) {
+void worblicontroller::addregistry(symbol_code sym, name registry) {
     require_auth( _self );
-    auto regitr = _registries.find(registry.value);
-    eosio_assert( regitr == _registries.end(), "Registry already exists");
-    _registries.emplace(_self, [&]( auto& reg ) {
+    registry_table registrytable(_self, sym.raw()); 
+    auto regitr = registrytable.find(registry.value);
+    eosio_assert( regitr == registrytable.end(), "Registry already exists");
+    registrytable.emplace(_self, [&]( auto& reg ) {
         reg.registry = registry;
     });
 }
 
-void worblicontroller::delregistry(name registry) {
+void worblicontroller::delregistry(symbol_code sym, name registry) {
     require_auth( _self );
-    auto regitr = _registries.find(registry.value);
-    eosio_assert( regitr != _registries.end(), "Registry does not exist is database");
-    _registries.erase(regitr);
+    registry_table registries(_self, sym.raw()); 
+    auto regitr = registries.find(registry.value);
+    eosio_assert( regitr != registries.end(), "Registry does not exist is database");
+    registries.erase(regitr);
 }
 
 EOSIO_DISPATCH( worblicontroller, (addrcvreq)(delrcvreq)(addsendreq)(delsendreq)
                 (addregistry)(delregistry) )
+
+}

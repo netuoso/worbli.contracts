@@ -12,23 +12,23 @@
 namespace registeredtoken {
 
     using eosio::name;
-    using eosio::symbol;
 
-    struct permission {
-        name   key;
-        name   value;
-
-        uint64_t primary_key()const { return key.value; }
-    };
-
-    
     // struct for regitries grant permissions to onchain accounts      
     struct requirement {
-        name                key;
-        std::vector<name>   values;
+        name     key;
+        name     value;
 
         uint64_t primary_key()const { return key.value; }
     }; 
+
+    struct permission {
+        uint64_t    pkey;
+        name        account;
+        requirement requirement;
+
+        uint64_t primary_key()const    { return pkey;             }
+        uint64_t by_account()const { return account.value; }
+    };
 
     struct registry {
         name         registry;
@@ -36,11 +36,10 @@ namespace registeredtoken {
         uint64_t primary_key()const { return registry.value; }
     };
 
-    struct [[eosio::table]] controller {
-        symbol   token;
+    struct [[eosio::table("controller"), eosio::contract("eosio.token")]] controller {
         name     controller;
 
-        uint64_t primary_key()const { return token.code().raw(); }
+        uint64_t primary_key()const { return controller.value; }
     };    
 
 

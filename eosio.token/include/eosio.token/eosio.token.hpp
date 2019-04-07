@@ -51,10 +51,10 @@ namespace eosio {
          void close( name owner, const symbol& symbol );
 
          [[eosio::action]]
-         void setcntlr( const symbol& symbol, name controller );
+         void setcntlr( symbol_code sym, name controller );
 
          [[eosio::action]]
-         void unsetcntlr( const symbol& symbol );
+         void unsetcntlr( symbol_code sym );
 
          static asset get_supply( name token_contract_account, symbol_code sym_code )
          {
@@ -89,18 +89,17 @@ namespace eosio {
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
          // regulated token structs
-         struct [[eosio::table("controller")]] : controller{};
          typedef eosio::multi_index< "controller"_n, controller > controller_table;
-
          typedef eosio::multi_index< "registries"_n, registry > registry_table;
-
          typedef eosio::multi_index< "receivereqs"_n, requirement> receivereqs_table;
          typedef eosio::multi_index< "sendreqs"_n, requirement> sendreqs_table;
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
          void is_transfer_allowed( name from, name to, asset quantity );
-         void is_verified( name address );
+         void is_receiver_verified( name from, name controller, symbol_code sym);
+         void is_sender_verified( name from, name controller, symbol_code sym);
+         void verify( name from, sendreqs_table& reqs);
    };
 
 } /// namespace eosio
