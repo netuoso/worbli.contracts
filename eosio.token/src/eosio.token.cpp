@@ -222,16 +222,26 @@ namespace eosio {
 
    void token::is_sender_verified( name from,  name controller, symbol_code sym ) {
       sendreqs_table requirements( controller, sym.raw() );
-      
-      auto req_itr = requirements.upper_bound(0);      
+      name scope = from;
+
+      auto req_itr = requirements.upper_bound(0);
+ 
       if( req_itr != requirements.end() ) {
          registry_table registries( controller, sym.raw() );
          auto registry_itr = registries.upper_bound(0);
-         eosio_assert( registry_itr != registries.end(), "No registry for thi symbol" );
+         eosio_assert( registry_itr != registries.end(), "No registry for this symbol" );
 
-         for( const auto& reqistry : registries ) {
-            // lookup permissions
-            print("requirement: ", reqistry.registry, "\n");
+         for( const auto& requirement : requirements ) {
+            bool satisfied = false;
+            for( const auto& reqistry : registries ) {
+               permission_table permissions( reqistry.registry, from.value );
+               auto perm_itr = permissions.find(requirement.key.value);
+               if( perm_itr == permissions.end() ) continue;
+
+               if( perm_itr->value == requirement.value )
+                  satisfied = true;
+            }
+            eosio_assert( satisfied, "requirment not satisfied" );
          }
       }
    }

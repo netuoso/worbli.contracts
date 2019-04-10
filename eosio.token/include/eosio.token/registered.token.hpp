@@ -21,14 +21,7 @@ namespace registeredtoken {
         uint64_t primary_key()const { return key.value; }
     }; 
 
-    struct permission {
-        uint64_t    pkey;
-        name        account;
-        requirement requirement;
-
-        uint64_t primary_key()const    { return pkey;             }
-        uint64_t by_account()const { return account.value; }
-    };
+    struct permission : requirement {};
 
     struct registry {
         name         registry;

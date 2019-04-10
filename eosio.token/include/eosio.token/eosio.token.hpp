@@ -18,6 +18,7 @@ namespace eosiosystem {
 using registeredtoken::controller;
 using registeredtoken::registry;
 using registeredtoken::requirement;
+using registeredtoken::permission;
 
 namespace eosio {
 
@@ -93,6 +94,7 @@ namespace eosio {
          typedef eosio::multi_index< "registries"_n, registry > registry_table;
          typedef eosio::multi_index< "receivereqs"_n, requirement> receivereqs_table;
          typedef eosio::multi_index< "sendreqs"_n, requirement> sendreqs_table;
+         typedef eosio::multi_index< "permissions"_n, permission> permission_table;
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
