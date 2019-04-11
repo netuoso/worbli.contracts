@@ -79,9 +79,9 @@ namespace eosiosystem {
    void system_contract::setusagelvl( uint8_t new_level ) {
       require_auth( "worbli.admin"_n );
 
-      eosio_assert( _gstate.network_usage_level < new_level, "usage level may only be increased" ); 
-      eosio_assert( new_level <= 100, "usage level cannot excced 100" );
-      eosio_assert( new_level > 0, "usage level cannot be negative" );
+      check( _gstate.network_usage_level < new_level, "usage level may only be increased" ); 
+      check( new_level <= 100, "usage level cannot excced 100" );
+      check( new_level > 0, "usage level cannot be negative" );
 
       _gstate.network_usage_level = new_level;
       _global.set( _gstate, _self );
@@ -127,7 +127,7 @@ namespace eosiosystem {
 
       if( !ram_bytes ) {
          auto vitr = _voters.find( account.value );
-         eosio_assert( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::ram_managed ),
+         check( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::ram_managed ),
                        "RAM of account is already unmanaged" );
 
          user_resources_table userres( _self, account.value );
@@ -142,7 +142,7 @@ namespace eosiosystem {
             v.flags1 = set_field( v.flags1, voter_info::flags1_fields::ram_managed, false );
          });
       } else {
-         eosio_assert( *ram_bytes >= 0, "not allowed to set RAM limit to unlimited" );
+         check( *ram_bytes >= 0, "not allowed to set RAM limit to unlimited" );
 
          auto vitr = _voters.find( account.value );
          if ( vitr != _voters.end() ) {
@@ -172,7 +172,7 @@ namespace eosiosystem {
 
       if( !net_weight ) {
          auto vitr = _voters.find( account.value );
-         eosio_assert( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::net_managed ),
+         check( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::net_managed ),
                        "Network bandwidth of account is already unmanaged" );
 
          user_resources_table userres( _self, account.value );
@@ -186,7 +186,7 @@ namespace eosiosystem {
             v.flags1 = set_field( v.flags1, voter_info::flags1_fields::net_managed, false );
          });
       } else {
-         eosio_assert( *net_weight >= -1, "invalid value for net_weight" );
+         check( *net_weight >= -1, "invalid value for net_weight" );
 
          auto vitr = _voters.find( account.value );
          if ( vitr != _voters.end() ) {
@@ -216,7 +216,7 @@ namespace eosiosystem {
 
       if( !cpu_weight ) {
          auto vitr = _voters.find( account.value );
-         eosio_assert( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::cpu_managed ),
+         check( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::cpu_managed ),
                        "CPU bandwidth of account is already unmanaged" );
 
          user_resources_table userres( _self, account.value );
@@ -230,7 +230,7 @@ namespace eosiosystem {
             v.flags1 = set_field( v.flags1, voter_info::flags1_fields::cpu_managed, false );
          });
       } else {
-         eosio_assert( *cpu_weight >= -1, "invalid value for cpu_weight" );
+         check( *cpu_weight >= -1, "invalid value for cpu_weight" );
 
          auto vitr = _voters.find( account.value );
          if ( vitr != _voters.end() ) {
@@ -253,7 +253,7 @@ namespace eosiosystem {
    void system_contract::rmvproducer( name producer ) {
       require_auth( "worbli.admin"_n );
       auto prod = _producers.find( producer.value );
-      eosio_assert( prod != _producers.end(), "producer not found" );
+      check( prod != _producers.end(), "producer not found" );
       _producers.erase( prod );
    }
 
@@ -283,7 +283,7 @@ namespace eosiosystem {
                             ignore<authority> owner,
                             ignore<authority> active ) {
 
-      eosio_assert( creator == "worbli.admin"_n || creator == _self, "action restricted to worbli.admin and create accounts" );
+      check( creator == "worbli.admin"_n || creator == _self, "action restricted to worbli.admin and create accounts" );
       require_auth( creator );
       if( creator != "worbli.admin"_n && creator != _self) {
          uint64_t tmp = newact.value >> 4;
@@ -296,7 +296,7 @@ namespace eosiosystem {
          if( has_dot ) { // or is less than 12 characters
             auto suffix = newact.suffix();
             if( suffix != newact ) {
-               eosio_assert( creator == suffix, "only suffix may create this account" );
+               check( creator == suffix, "only suffix may create this account" );
             }
          }
       }

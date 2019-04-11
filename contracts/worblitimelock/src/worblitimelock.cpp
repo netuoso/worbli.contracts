@@ -88,14 +88,14 @@ public:
   void addrcpnt (name owner, asset amount)
   {
     require_auth(WBI_TIMELOCK_ADMIN);
-    eosio_assert( is_account( owner ), "owner account does not exist");
-    eosio_assert(amount.symbol == WBI_SYMBOL, "invalid symbol");
-    eosio_assert(amount.amount >= 0, "negative amount");
+    check( is_account( owner ), "owner account does not exist");
+    check(amount.symbol == WBI_SYMBOL, "invalid symbol");
+    check(amount.amount >= 0, "negative amount");
         
     _add_liabilities(amount);
     
     auto rcptitr = _recipients.find(owner.value);
-    eosio_assert(rcptitr == _recipients.end(), "recipient already exists, please use updatercpnt");
+    check(rcptitr == _recipients.end(), "recipient already exists, please use updatercpnt");
 
     _recipients.emplace(_self, [&]( auto& item ) {
         item.owner = owner;
@@ -114,15 +114,15 @@ public:
   void updatercpnt (name owner, asset amount)
   {
     require_auth(WBI_TIMELOCK_ADMIN);
-    eosio_assert( is_account( owner ), "owner account does not exist");
-    eosio_assert(amount.symbol == WBI_SYMBOL, "invalid symbol");
-    eosio_assert(amount.amount >= 0, "negative amount");
+    check( is_account( owner ), "owner account does not exist");
+    check(amount.symbol == WBI_SYMBOL, "invalid symbol");
+    check(amount.amount >= 0, "negative amount");
 
     _add_liabilities(amount);
     
     auto rcptitr = _recipients.find(owner.value);
-    eosio_assert(rcptitr != _recipients.end(), "recipient does not exist, please use addrcpnt");
-    eosio_assert(amount.amount + rcptitr->locked_tokens.amount >= 0 , "this would result in over payment");
+    check(rcptitr != _recipients.end(), "recipient does not exist, please use addrcpnt");
+    check(amount.amount + rcptitr->locked_tokens.amount >= 0 , "this would result in over payment");
     _recipients.modify( *rcptitr, _self, [&]( auto& item ) {
         item.total_tokens += amount;
         item.locked_tokens += amount;
@@ -138,9 +138,9 @@ public:
   void claim (name owner)
   {
     require_auth(owner);
-    eosio_assert( is_account( owner ), "owner account does not exist");
+    check( is_account( owner ), "owner account does not exist");
     auto rcptitr = _recipients.find(owner.value);
-    eosio_assert(rcptitr != _recipients.end(), "cannot find the owner in the database");
+    check(rcptitr != _recipients.end(), "cannot find the owner in the database");
 
     for (auto itr = _conditions.begin(); itr != _conditions.end(); itr++) {
       auto cnditr = std::find(rcptitr->conditions.begin(), rcptitr->conditions.end(), (*itr).cond);
@@ -164,15 +164,15 @@ public:
   void release (name owner, name cond)
   {
     require_auth(WBI_TIMELOCK_ADMIN);
-    eosio_assert( is_account( owner ), "owner account does not exist");
+    check( is_account( owner ), "owner account does not exist");
     auto rcptitr = _recipients.find(owner.value);
-    eosio_assert(rcptitr != _recipients.end(), "cannot find the owner in the database");
+    check(rcptitr != _recipients.end(), "cannot find the owner in the database");
     auto conditr = _conditions.find(cond.value);
-    eosio_assert(conditr != _conditions.end(), "cannot find this condition name");
+    check(conditr != _conditions.end(), "cannot find this condition name");
 
     // the same condition cannot be achieved twice
     auto cnditr = std::find(rcptitr->conditions.begin(), rcptitr->conditions.end(), cond);
-    eosio_assert(cnditr == rcptitr->conditions.end(), "This condition is already met for the account");
+    check(cnditr == rcptitr->conditions.end(), "This condition is already met for the account");
 
     _recipients.modify( *rcptitr, _self, [&]( auto& item ) {
         item.conditions.emplace_back(cond);
@@ -236,8 +236,8 @@ private:
 
     // make sure liabilities are affordable
     int64_t total_liablilities = _getvar_int(name("liabilities")) + amount.amount;
-    eosio_assert(total_liablilities >= 0, "Negative total liabilities");
-    eosio_assert(total_liablilities <= current_balance.amount, "Insufficient funds on escrow account");
+    check(total_liablilities >= 0, "Negative total liabilities");
+    check(total_liablilities <= current_balance.amount, "Insufficient funds on escrow account");
 
     _setvar_int(name("liabilities"), total_liablilities);
   }

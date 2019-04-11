@@ -32,13 +32,13 @@ namespace eosiosystem {
     *
     */
    void system_contract::addproducer( const name producer ) {
-      eosio_assert( producer != "worbli.admin"_n, "producer should not be worbli.admin" );
-      eosio_assert( producer != "eosio"_n, "producer should not be eosio" );
+      check( producer != "worbli.admin"_n, "producer should not be worbli.admin" );
+      check( producer != "eosio"_n, "producer should not be eosio" );
       require_auth( "worbli.admin"_n );
 
       auto prod = _producers.find( producer.value );
 
-      eosio_assert( prod == _producers.end(), "account already registered as a producer" );
+      check( prod == _producers.end(), "account already registered as a producer" );
 
       _producers.emplace( producer, [&]( producer_info& info ){
             info.owner         = producer;
@@ -60,7 +60,7 @@ namespace eosiosystem {
 
       auto prod = _producers.find( producer.value );
 
-      eosio_assert( prod != _producers.end(), "account is not registered as a producer" );
+      check( prod != _producers.end(), "account is not registered as a producer" );
 
       _producers.modify( prod, producer, [&]( producer_info& info ){
             info.producer_key = producer_key;
