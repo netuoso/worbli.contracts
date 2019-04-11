@@ -1,0 +1,10 @@
+#####
+double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
+                                               time_point ct,
+                                               double shares_rate, bool reset_to_zero = false );
+
+Example of passing table to function!!!!
+
+### do we need this test?
+### numbers not adding up
+update_rex_vote
