@@ -4792,7 +4792,7 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
    BOOST_REQUIRE( get_total_stake( "eosio" ).is_null() );
 
    // Worbli todo: cacluate exactly how much tokens needed for RAM
-   transfer( N(eosio), N(worbli.admin), core_sym::from_string("34021.0000") );
+   transfer( N(eosio), N(worbli.admin), core_sym::from_string("34043.0000") );
 
    auto error_msg = stake( N(worbli.admin), N(eosio), core_sym::from_string("10.0000"), core_sym::from_string("10.0000") );
    auto semicolon_pos = error_msg.find(';');
@@ -4808,6 +4808,9 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
       ram_bytes_needed += ram_bytes_needed/10; // enough buffer to make up for buyrambytes estimation errors
    }
 
+   // std::cout << "bytes needed: " << ram_bytes_needed << std::endl;
+   // 68 bytes per WBI
+
    auto alice_original_balance = get_balance( N(worbli.admin) );
    
    BOOST_REQUIRE_EQUAL( success(), buyrambytes( N(worbli.admin), N(eosio), static_cast<uint32_t>(ram_bytes_needed) ) );
@@ -4821,7 +4824,7 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
       ("cpu_weight", core_sym::from_string("0.0000"))
-      ("ram_stake", core_sym::from_string("34002.6323"))
+      ("ram_stake", core_sym::from_string("34042.4264"))
       ("ram_bytes",  total_res["ram_bytes"].as_int64() )
    );
 
