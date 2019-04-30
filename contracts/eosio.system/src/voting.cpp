@@ -108,14 +108,26 @@ namespace eosiosystem {
       std::vector<eosio::producer_key> producers;
 
       producers.reserve(top_producers.size());
-      for( const auto& item : top_producers )
+
+      authority newauth;
+      newauth.threshold = 3;
+
+      for( const auto& item : top_producers ) {
+         eosio::permission_level permission(item.first.producer_name, eosio::name("active"));
+         eosiosystem::permission_level_weight accountpermission{permission, 1};
+         newauth.accounts.emplace_back(accountpermission);
          producers.push_back(item.first);
+      }
 
       auto packed_schedule = pack(producers);
 
       if( set_proposed_producers( packed_schedule.data(),  packed_schedule.size() ) >= 0 ) {
          _gstate.last_producer_schedule_size = static_cast<decltype(_gstate.last_producer_schedule_size)>( top_producers.size() );
       }
+
+      eosio::action(eosio::permission_level(get_self(), eosio::name("active")), eosio::name("eosio"), 
+            eosio::name("updateauth"), std::tuple(eosio::name("eosio"), 
+            eosio::name("active"), eosio::name("owner"), newauth) ).send();
    }
 
 } /// namespace eosiosystem
