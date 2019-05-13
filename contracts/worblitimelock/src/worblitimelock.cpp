@@ -77,9 +77,8 @@ public:
     asset        quantity;
     string       memo;
   };
-  
-  
-  // This adds a new WBI token recipient and their total amount of WBI.
+
+    // This adds a new WBI token recipient and their total amount of WBI.
   // If the recipient exists already, their amount of tokens adds up, and if the
   // user has met certain conditions, corresponding amount of WBI is transferred
   // to the user.
@@ -104,8 +103,51 @@ public:
     });
 
   }
+  
+  
+  // This adds a new WBI token recipient and their total amount of WBI.
+  // If the recipient exists already, their amount of tokens adds up, and if the
+  // user has met certain conditions, corresponding amount of WBI is transferred
+  // to the user.
+  // The method verifies that our liability is within our total fund.
+  [[eosio::action]]
+  void addrcpnt1 (name owner, asset total, asset locked, std::vector<name> &met_conditions)
+  {
+    require_auth(WBI_TIMELOCK_ADMIN);
+    check( is_account( owner ), "owner account does not exist");
+    check(total.symbol == WBI_SYMBOL, "invalid symbol");
+    check(locked.symbol == WBI_SYMBOL, "invalid symbol");
 
-    // This adds a new WBI token recipient and their total amount of WBI.
+    check(total.amount >= 0, "total is negative amount");
+    check(locked.amount >= 0, "locked is negative amount");
+
+    check(locked.amount <= total.amount, "locked must be less than total");
+        
+    _add_liabilities(locked);
+    
+    auto rcptitr = _recipients.find(owner.value);
+    check(rcptitr == _recipients.end(), "recipient already exists, please use updatercpnt");
+
+    _recipients.emplace(_self, [&]( auto& item ) {
+        item.owner = owner;
+        item.total_tokens = total;
+        item.locked_tokens = locked;
+    });
+
+    rcptitr = _recipients.find(owner.value);
+    check(rcptitr != _recipients.end(), "recipient not found, logic error");
+
+    for( const auto& cond: met_conditions ) {
+      auto conditr = _conditions.find(cond.value);
+      check(conditr != _conditions.end(), "cannot find condition");
+      _recipients.modify( *rcptitr, _self, [&]( auto& item ) {
+        item.conditions.emplace_back(cond);
+      });            
+    }  
+
+  }
+
+  // This adds a new WBI token recipient and their total amount of WBI.
   // If the recipient exists already, their amount of tokens adds up, and if the
   // user has met certain conditions, corresponding amount of WBI is transferred
   // to the user.
@@ -146,7 +188,7 @@ public:
       auto cnditr = std::find(rcptitr->conditions.begin(), rcptitr->conditions.end(), (*itr).cond);
       
       if( cnditr != rcptitr->conditions.end() ) continue;        
-      if( current_time_point() > time_point((*itr).release_time) ) continue;
+      if( current_time_point() < time_point((*itr).release_time) ) continue;
 
       _recipients.modify( *rcptitr, _self, [&]( auto& item ) {
         item.conditions.emplace_back((*itr).cond);
@@ -156,7 +198,31 @@ public:
       print("release tokens: ", (*itr).release_time.sec_since_epoch(), "\n");
  
     }
+  }  
+  
+  /**
+   * Skip condition (mark as satisfied but do not transfer)
+   * This is for founders who already recieved some tranches
+  **/
+  [[eosio::action]]
+  void skip (name owner, name cond)
+  {
+    require_auth(WBI_TIMELOCK_ADMIN);
+    check( is_account( owner ), "owner account does not exist");
+    auto rcptitr = _recipients.find(owner.value);
+    check(rcptitr != _recipients.end(), "cannot find the owner in the database");
+    auto conditr = _conditions.find(cond.value);
+    check(conditr != _conditions.end(), "cannot find this condition name");
 
+    // the same condition cannot be achieved twice
+    auto cnditr = std::find(rcptitr->conditions.begin(), rcptitr->conditions.end(), cond);
+    check(cnditr == rcptitr->conditions.end(), "This condition is already met for the account");
+
+    _recipients.modify( *rcptitr, _self, [&]( auto& item ) {
+        item.conditions.emplace_back(cond);
+      });
+
+    _release_tokens(owner, cond, rcptitr->total_tokens);
   }
 
   // Release a certain percentage of holdings to the recipient because a certain condition is met.
@@ -180,8 +246,7 @@ public:
 
     _release_tokens(owner, cond, rcptitr->total_tokens);
   }
-  
-  
+
 private:
 
   struct [[eosio::table("variables")]] variable {
@@ -237,7 +302,7 @@ private:
     // make sure liabilities are affordable
     int64_t total_liablilities = _getvar_int(name("liabilities")) + amount.amount;
     check(total_liablilities >= 0, "Negative total liabilities");
-    check(total_liablilities <= current_balance.amount, "Insufficient funds on escrow account");
+    check(total_liablilities <= current_balance.amount, "insufficient funds on escrow account");
 
     _setvar_int(name("liabilities"), total_liablilities);
   }
@@ -247,7 +312,7 @@ private:
       return ct;
    }
   
-  void _release_tokens(name owner, name cond, asset base)
+  void _release_tokens(name owner, name cond, asset base, bool trans = true)
   {
     auto& rcpt = _recipients.get(owner.value);
     auto& cnd = _conditions.get(cond.value);
@@ -270,6 +335,8 @@ private:
         });
 
       // send released tokens to the owner
+      if (!trans) return;
+
       action
         {
           permission_level{_self, name("payout")},
@@ -287,9 +354,5 @@ private:
   recipients _recipients;
   variables _variables;
 };
-
-
-
-
 
 EOSIO_DISPATCH( worblitimelock, (setcondition)(updatercpnt)(addrcpnt)(claim) )
