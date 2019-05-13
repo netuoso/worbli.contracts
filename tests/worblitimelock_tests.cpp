@@ -38,19 +38,6 @@ public:
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       abi_ser.set_abi(abi, abi_serializer_max_time);
 
-      /**
-      auto trace_auth = base_tester::push_action(config::system_account_name, updateauth::get_name(), N(founders), mvo()
-                                            ("account", "founders")
-                                            ("permission", "payout")
-                                            ("parent", name(config::owner_name).to_string())
-                                            ("auth",  authority(1, {}, {
-                                                  permission_level_weight{{config::system_account_name, config::eosio_code_name}, 1}
-                                               }
-                                            ))
-      );
-      BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace_auth->receipt->status);
-      **/
-
       set_authority(N(founders), 
                     "payout", 
                     authority(1,
@@ -139,20 +126,19 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account", data, abi_serializer_max_time );
    }
 
-   action_result add_recipient( account_name owner, asset amount ) {
+   action_result add_recipient( account_name owner, asset amount, 
+                                vector<account_name> met_conditions ) {
       return push_action( N(worbli.admin), N(addrcpnt), mvo()
            ( "owner", owner )
            ( "amount", amount )
+           ( "met_conditions", met_conditions )
       );
    }
 
-   action_result add_recipient1( account_name owner, asset total, 
-                                asset locked, vector<account_name> met_conditions ) {
-      return push_action( N(worbli.admin), N(addrcpnt1), mvo()
+   action_result update_recipient( account_name owner, asset amount ) {
+      return push_action( N(worbli.admin), N(updatercpnt), mvo()
            ( "owner", owner )
-           ( "total", total )
-           ( "locked", locked )
-           ( "met_conditions", met_conditions )
+           ( "amount", amount )
       );
    }
 
@@ -193,6 +179,11 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "recipient", data, abi_serializer_max_time );
    }
 
+   fc::variant get_variable( name var ) {
+      vector<char> data = get_row_by_account( N(founders), N(founders), N(variables), var );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "variable", data, abi_serializer_max_time );
+   }
+
    uint32_t last_block_time() const {
       return time_point_sec( control->head_block_time() ).sec_since_epoch();
    }
@@ -205,29 +196,29 @@ BOOST_AUTO_TEST_SUITE(worblitimelock_tests)
 
 BOOST_FIXTURE_TEST_CASE( create_tests, worblitimelock_tester ) try {
 
-
    auto stats = get_stats("4," CORE_SYM_NAME);
-   //std::cout << "supply: " << supply << std::endl;
    REQUIRE_MATCHING_OBJECT( stats, mvo()
       ("supply", "1000000000.0000 TST")
       ("max_supply", "10000000000.0000 TST")
       ("issuer", "eosio")
    );
 
+   std::cout << "fucky: " << std::endl;
+
    // make sure contract is funded
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "no balance object found" ),
       add_recipient( N(founder1), core_sym::from_string("50000000.0000"), 
-                               core_sym::from_string("50000000.0000"), 
                                vector<account_name>{}
       )
    );   
+
+   std::cout << "fucky: " << std::endl;
 
    transfer("eosio", "founders", core_sym::from_string("1.0000"), "escrow funding");
 
    // confirm sufficient funds
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "insufficient funds on escrow account" ),
-      add_recipient( N(founder1), core_sym::from_string("50000000.0000"), 
-                               core_sym::from_string("50000000.0000"), 
+      add_recipient( N(founder1), core_sym::from_string("50000000.0000"),
                                vector<account_name>{}
       )
    );   
@@ -238,21 +229,18 @@ BOOST_FIXTURE_TEST_CASE( create_tests, worblitimelock_tester ) try {
    
    BOOST_REQUIRE_EQUAL( success(), 
                         add_recipient( N(founder1), core_sym::from_string("50000000.0000"), 
-                               core_sym::from_string("50000000.0000"), 
                                vector<account_name>{}
                         ) 
    );
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "recipient already exists, please use updatercpnt" ), 
                         add_recipient( N(founder1), core_sym::from_string("50000000.0000"), 
-                               core_sym::from_string("50000000.0000"), 
                                vector<account_name>{}
                         ) 
    );
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "cannot find condition" ), 
-                        add_recipient( N(founder2), core_sym::from_string("50000000.0000"), 
-                               core_sym::from_string("50000000.0000"), 
+                        add_recipient( N(founder2), core_sym::from_string("50000000.0000"),
                                vector<account_name>{N(tranche1), N(tranche2)}
                         ) 
    );
@@ -307,8 +295,7 @@ BOOST_FIXTURE_TEST_CASE( standard_claim_tests, worblitimelock_tester ) try {
    
    BOOST_REQUIRE_EQUAL( success(), 
                         add_recipient( N(founder1), 
-                                       core_sym::from_string("1000.0000"), 
-                                       core_sym::from_string("1000.0000"), 
+                                       core_sym::from_string("1000.0000"),
                                        vector<account_name>{}
                         ) 
    );
@@ -369,9 +356,128 @@ BOOST_FIXTURE_TEST_CASE( standard_claim_tests, worblitimelock_tester ) try {
                         get_balance(N(founders))  
    );
 
+} FC_LOG_AND_RETHROW()
 
-   std::cout << "head block time: " << last_block_time() << std::endl;
-   std::cout << "balance: " << get_balance(N(founder1)) << std::endl;
+
+BOOST_FIXTURE_TEST_CASE( existing_claim_tests, worblitimelock_tester ) try {
+
+   auto stats = get_stats("4," CORE_SYM_NAME);
+   //std::cout << "supply: " << supply << std::endl;
+   REQUIRE_MATCHING_OBJECT( stats, mvo()
+      ("supply", "1000000000.0000 TST")
+      ("max_supply", "10000000000.0000 TST")
+      ("issuer", "eosio")
+   );
+
+   transfer("eosio", "founders", core_sym::from_string("10000.0000"), "escrow funding");
+   BOOST_REQUIRE_EQUAL( success(), set_condition( N(tranche1), 30000, "Tranche 1", "2019-11-15T00:00:00.000") );
+   BOOST_REQUIRE_EQUAL( success(), set_condition( N(tranche2), 15000, "Tranche 2", "2020-05-15T00:00:00.000") );
+   BOOST_REQUIRE_EQUAL( success(), set_condition( N(tranche3), 15000, "Tranche 3", "2020-11-15T00:00:00.000") );
+   BOOST_REQUIRE_EQUAL( success(), set_condition( N(tranche4), 15000, "Tranche 4", "2021-05-15T00:00:00.000") );
+
+   // confirm condition has been updated
+   auto cond = get_condition(N(tranche1));
+   REQUIRE_MATCHING_OBJECT( cond, mvo()
+      ("cond", "tranche1")
+      ("release_time", "2019-11-15T00:00:00")
+      ("tpercent", 30000)
+      ("description", "Tranche 1")
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        add_recipient( N(founder1), 
+                                       core_sym::from_string("1000.0000"), 
+                                       vector<name>{N(tranche1)}
+                        ) 
+   );
+
+   auto liability = get_variable(N(liabilities));
+   REQUIRE_MATCHING_OBJECT( liability, mvo()
+      ("key", "liabilities")
+      ("val_int", 7000000)
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        claim( N(founder1) ) 
+   );
+
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), 
+                        get_balance(N(founder1))  
+   );
+
+   // produce for 5 1/2 months then claim again
+   produce_block( fc::days(135) );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        claim( N(founder1) ) 
+   );
+
+   // balance should be 300.0000 as tranche1 has been reached
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("150.0000"), 
+                        get_balance(N(founder1))  
+   );
+
+   // produce 6 more months so we can claim tranche3
+   produce_block( fc::days(185) );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        claim( N(founder1) ) 
+   );
+      // balance should be 1000.0000 as tranche3 has been reached
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("300.0000"), 
+                        get_balance(N(founder1))  
+   );
+
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("9700.0000"), 
+                        get_balance(N(founders))  
+   );
+
+   update_recipient( N(founder1), core_sym::from_string("1000.0000") );
+
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("900.0000"), 
+                        get_balance(N(founder1))  
+   );
+
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("9100.0000"), 
+                        get_balance(N(founders))  
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        add_recipient( N(founder2), 
+                                       core_sym::from_string("2000.0000"), 
+                                       vector<name>{}
+                        ) 
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        claim( N(founder2) ) 
+   );
+
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("1200.0000"), 
+                        get_balance(N(founder2))  
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        add_recipient( N(founder3), 
+                                       core_sym::from_string("2000.0000"), 
+                                       vector<name>{N(tranche1),N(tranche2)}
+                        ) 
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        claim( N(founder3) ) 
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+                        claim( N(founder3) ) 
+   );
+
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("300.0000"), 
+                        get_balance(N(founder3))  
+   );
+
+
+
 
 } FC_LOG_AND_RETHROW()
 
