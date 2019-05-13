@@ -57,8 +57,6 @@ public:
     }
   }
 
-
-
   struct [[eosio::table("recipients")]] recipient {
     name           owner;
     asset          total_tokens;   // amount of WBI that the user may theoretically receive
@@ -85,14 +83,23 @@ public:
   // to the user.
   // The method verifies that our liability is within our total fund.
   [[eosio::action]]
-  void addrcpnt (name owner, asset amount)
+  void addrcpnt (name owner, asset amount, std::vector<name> &met_conditions)
   {
     require_auth(WBI_TIMELOCK_ADMIN);
     check( is_account( owner ), "owner account does not exist");
     check(amount.symbol == WBI_SYMBOL, "invalid symbol");
-    check(amount.amount >= 0, "negative amount");
-        
-    _add_liabilities(amount);
+    check(amount.amount >= 0, "amount is negative amount");
+
+    uint64_t tpercent_met = 0;
+    for( const auto& cond: met_conditions ) {
+      auto conditr = _conditions.find(cond.value);
+      check(conditr != _conditions.end(), "cannot find condition");
+      tpercent_met += conditr->tpercent;         
+    } 
+
+    asset locked(0, WBI_SYMBOL);
+    locked.amount = amount.amount * (100000 - tpercent_met) / 100000;
+    _add_liabilities(locked);
     
     auto rcptitr = _recipients.find(owner.value);
     check(rcptitr == _recipients.end(), "recipient already exists, please use updatercpnt");
@@ -100,8 +107,19 @@ public:
     _recipients.emplace(_self, [&]( auto& item ) {
         item.owner = owner;
         item.total_tokens = amount;
-        item.locked_tokens = amount;
+        item.locked_tokens = locked;
     });
+
+    rcptitr = _recipients.find(owner.value);
+    check(rcptitr != _recipients.end(), "recipient not found, logic error");
+
+    for( const auto& cond: met_conditions ) {
+      auto conditr = _conditions.find(cond.value);
+      check(conditr != _conditions.end(), "cannot find condition");
+      _recipients.modify( *rcptitr, _self, [&]( auto& item ) {
+        item.conditions.emplace_back(cond);
+      });            
+    }  
 
   }
 
@@ -146,42 +164,18 @@ public:
       auto cnditr = std::find(rcptitr->conditions.begin(), rcptitr->conditions.end(), (*itr).cond);
       
       if( cnditr != rcptitr->conditions.end() ) continue;        
-      if( current_time_point() > time_point((*itr).release_time) ) continue;
+      if( current_time_point() < time_point((*itr).release_time) ) continue;
 
       _recipients.modify( *rcptitr, _self, [&]( auto& item ) {
         item.conditions.emplace_back((*itr).cond);
       });
 
       _release_tokens(owner, (*itr).cond, rcptitr->total_tokens);
-      print("release tokens: ", (*itr).release_time.sec_since_epoch(), "\n");
  
     }
 
   }
 
-  // Release a certain percentage of holdings to the recipient because a certain condition is met.
-  [[eosio::action]]
-  void release (name owner, name cond)
-  {
-    require_auth(WBI_TIMELOCK_ADMIN);
-    check( is_account( owner ), "owner account does not exist");
-    auto rcptitr = _recipients.find(owner.value);
-    check(rcptitr != _recipients.end(), "cannot find the owner in the database");
-    auto conditr = _conditions.find(cond.value);
-    check(conditr != _conditions.end(), "cannot find this condition name");
-
-    // the same condition cannot be achieved twice
-    auto cnditr = std::find(rcptitr->conditions.begin(), rcptitr->conditions.end(), cond);
-    check(cnditr == rcptitr->conditions.end(), "This condition is already met for the account");
-
-    _recipients.modify( *rcptitr, _self, [&]( auto& item ) {
-        item.conditions.emplace_back(cond);
-      });
-
-    _release_tokens(owner, cond, rcptitr->total_tokens);
-  }
-  
-  
 private:
 
   struct [[eosio::table("variables")]] variable {
@@ -237,7 +231,7 @@ private:
     // make sure liabilities are affordable
     int64_t total_liablilities = _getvar_int(name("liabilities")) + amount.amount;
     check(total_liablilities >= 0, "Negative total liabilities");
-    check(total_liablilities <= current_balance.amount, "Insufficient funds on escrow account");
+    check(total_liablilities <= current_balance.amount, "insufficient funds on escrow account");
 
     _setvar_int(name("liabilities"), total_liablilities);
   }
@@ -287,9 +281,5 @@ private:
   recipients _recipients;
   variables _variables;
 };
-
-
-
-
 
 EOSIO_DISPATCH( worblitimelock, (setcondition)(updatercpnt)(addrcpnt)(claim) )
