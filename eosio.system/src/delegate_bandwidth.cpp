@@ -107,7 +107,6 @@ namespace eosiosystem {
     *  This action will buy an exact amount of ram and bill the payer the current market price.
     */
    void system_contract::buyrambytes( name payer, name receiver, uint32_t bytes ) {
-      eosio_assert( payer == "worbli.admin"_n || payer == _self , "only worbli.admin or eosio can purchase RAM" );
       const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
       const uint64_t token_precision = token_supply.symbol.precision();
       const uint64_t bytes_per_token = uint64_t((_gstate.max_ram_size / (double)token_supply.amount) * pow(10,token_precision));
@@ -120,7 +119,14 @@ namespace eosiosystem {
 
   void system_contract::buyram( name payer, name receiver, asset quant ) {
       require_auth( payer );
-      eosio_assert( payer == "worbli.admin"_n || _self , "only worbli.admin or eosio can purchase RAM" );
+
+      account_info_table accounts_tbl(_self, _self.value);
+      auto itr = accounts_tbl.find(payer.value);
+      bool can_create = itr == accounts_tbl.end() ? false : itr->kyc;
+
+      check( payer == "worbli.admin"_n || payer == _self || can_create,
+             "account not authorized to buy RAM" );
+
       eosio_assert( quant.symbol == core_symbol(), "must buy ram with core token" );
       eosio_assert( quant.amount > 0, "must purchase a positive amount" );
 
