@@ -10,6 +10,7 @@
 #include <eosiolib/privileged.hpp>
 #include <eosiolib/singleton.hpp>
 #include <eosio.system/exchange_state.hpp>
+#include <eosio.system/worbli.hpp>
 
 #include <string>
 #include <type_traits>
@@ -159,6 +160,7 @@ namespace eosiosystem {
          global_state_singleton  _global;
          eosio_global_state      _gstate;
          rammarket               _rammarket;
+         account_info_table      _account_info;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -298,6 +300,13 @@ namespace eosiosystem {
          // worlbi admin
          [[eosio::action]]
          void setprods( std::vector<eosio::producer_key> schedule );
+
+         // functions defined in worbli.cpp
+         [[eosio::action]]
+         void addaccount(name account, name parent, bool kyc, std::vector<name> children);
+
+         [[eosio::action]]
+         void updaccount(name account, bool kyc);
 
       private:
          // Implementation details:
