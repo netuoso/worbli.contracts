@@ -6,6 +6,7 @@
 #include "delegate_bandwidth.cpp"
 #include "voting.cpp"
 #include "exchange_state.cpp"
+#include "worbli.cpp"
 #include "rex.cpp"
 
 namespace eosiosystem {
@@ -17,6 +18,7 @@ namespace eosiosystem {
     _producers(_self, _self.value),
     _global(_self, _self.value),
     _rammarket(_self, _self.value),
+    _account_info(_self, _self.value),
     _rexpool(_self, _self.value),
     _rexfunds(_self, _self.value),
     _rexbalance(_self, _self.value),
@@ -283,8 +285,22 @@ namespace eosiosystem {
                             ignore<authority> owner,
                             ignore<authority> active ) {
 
-      check( creator == "worbli.admin"_n || creator == _self, "action restricted to worbli.admin and create accounts" );
       require_auth( creator );
+
+      account_info_table accounts_tbl(_self, _self.value);
+      auto itr = accounts_tbl.find(creator.value);
+      bool can_create = itr == accounts_tbl.end() ? false : itr->kyc;
+
+      check( creator == "worbli.admin"_n || creator == _self || can_create,
+             "account not authorized to create accounts" );
+
+      check( itr->max_children > itr->children.size(),
+             "sub account limit has been reached" );
+
+      accounts_tbl.modify( *itr, _self, [&]( auto& item ) {
+        item.children.emplace_back(newact);
+      });
+
       if( creator != "worbli.admin"_n && creator != _self) {
          uint64_t tmp = newact.value >> 4;
          bool has_dot = false;
@@ -372,5 +388,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      (onblock)(claimrewards)
      // worbli admin
      (setprods)
+     // worbli.cpp
+     (updaccount)(addaccount)
 )
 

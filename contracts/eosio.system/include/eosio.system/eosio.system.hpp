@@ -10,6 +10,7 @@
 #include <eosiolib/privileged.hpp>
 #include <eosiolib/singleton.hpp>
 #include <eosio.system/exchange_state.hpp>
+#include <eosio.system/worbli.hpp>
 
 #include <string>
 #include <deque>
@@ -257,6 +258,7 @@ namespace eosiosystem {
          global_state_singleton  _global;
          eosio_global_state      _gstate;
          rammarket               _rammarket;
+         account_info_table      _account_info;
          rex_pool_table          _rexpool;
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
@@ -531,6 +533,13 @@ namespace eosiosystem {
          // worlbi admin
          [[eosio::action]]
          void setprods( std::vector<eosio::producer_key> schedule );
+
+         // functions defined in worbli.cpp
+         [[eosio::action]]
+         void addaccount(name account, name parent, bool kyc, std::vector<name> children, uint16_t max_children);
+
+         [[eosio::action]]
+         void updaccount(name account, bool kyc, uint16_t max_children);
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
