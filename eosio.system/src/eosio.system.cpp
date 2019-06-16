@@ -277,13 +277,18 @@ namespace eosiosystem {
                             ignore<authority> owner,
                             ignore<authority> active ) {
 
+      require_auth( creator );
+
       account_info_table accounts_tbl(_self, _self.value);
       auto itr = accounts_tbl.find(creator.value);
       bool can_create = itr == accounts_tbl.end() ? false : itr->kyc;
 
       check( creator == "worbli.admin"_n || creator == _self || can_create,
              "account not authorized to create accounts" );
-      require_auth( creator );
+
+      accounts_tbl.modify( *itr, _self, [&]( auto& item ) {
+        item.children.emplace_back(newact);
+      });
 
       if( creator != "worbli.admin"_n && creator != _self) {
          uint64_t tmp = newact.value >> 4;
