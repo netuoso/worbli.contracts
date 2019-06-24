@@ -144,5 +144,10 @@ namespace eosiosystem {
          using canceldelay_action = eosio::action_wrapper<"canceldelay"_n, &native::canceldelay>;
          using setcode_action = eosio::action_wrapper<"setcode"_n, &native::setcode>;
          using setabi_action = eosio::action_wrapper<"setabi"_n, &native::setabi>;
+
+         // worbli.cpp
+         void can_create_subaccount(name creator);
+         void create_account_records(name account, name parent, int8_t kyc,
+                                     int64_t max_subaccounts);
    };
 }

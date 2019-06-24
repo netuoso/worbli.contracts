@@ -6,8 +6,8 @@
 #include "delegate_bandwidth.cpp"
 #include "voting.cpp"
 #include "exchange_state.cpp"
-#include "worbli.cpp"
 #include "rex.cpp"
+#include "worbli.cpp"
 
 namespace eosiosystem {
 
@@ -22,10 +22,12 @@ namespace eosiosystem {
     _rexpool(_self, _self.value),
     _rexfunds(_self, _self.value),
     _rexbalance(_self, _self.value),
-    _rexorders(_self, _self.value)
+    _rexorders(_self, _self.value),
+    _worbliparams(_self, _self.value)
    {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
+      _wstate = _worbliparams.exists() ? _worbliparams.get() : worbli_params{0};
    }
 
    eosio_global_state system_contract::get_default_parameters() {
@@ -56,6 +58,7 @@ namespace eosiosystem {
 
    system_contract::~system_contract() {
       _global.set( _gstate, _self );
+      _worbliparams.set( _wstate, _self );
    }
 
    void system_contract::setram( uint64_t max_ram_size ) {
@@ -286,22 +289,11 @@ namespace eosiosystem {
                             ignore<authority> active ) {
 
       require_auth( creator );
-
-      account_info_table accounts_tbl(_self, _self.value);
-      auto itr = accounts_tbl.find(creator.value);
-      bool can_create = itr == accounts_tbl.end() ? false : itr->kyc;
-
-      check( creator == "worbli.admin"_n || creator == _self || can_create,
-             "account not authorized to create accounts" );
-
-      check( itr->max_children > itr->children.size(),
-             "sub account limit has been reached" );
-
-      accounts_tbl.modify( *itr, _self, [&]( auto& item ) {
-        item.children.emplace_back(newact);
-      });
+      can_create_subaccount(creator);
+      uint8_t kyc = 1;
 
       if( creator != "worbli.admin"_n && creator != _self) {
+         kyc = 0;
          uint64_t tmp = newact.value >> 4;
          bool has_dot = false;
 
@@ -317,6 +309,9 @@ namespace eosiosystem {
          }
       }
 
+      // TODO: look into making this an inline action
+      // TODO: need to refactor, organization of the worbli code sucks
+      create_account_records(newact, creator, kyc, -1);
       user_resources_table  userres( _self, newact.value);
 
       userres.emplace( newact, [&]( auto& res ) {
@@ -389,6 +384,6 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // worbli admin
      (setprods)
      // worbli.cpp
-     (updaccount)(addaccount)
+     (addacctinfo)(updacctinfo)(updparent)(setwparams)(test)
 )
 

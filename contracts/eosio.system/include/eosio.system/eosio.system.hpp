@@ -263,6 +263,8 @@ namespace eosiosystem {
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
+         worbli_params_singleton _worbliparams;
+         worbli_params           _wstate;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -536,10 +538,16 @@ namespace eosiosystem {
 
          // functions defined in worbli.cpp
          [[eosio::action]]
-         void addaccount(name account, name parent, bool kyc, std::vector<name> children, uint16_t max_children);
+         void addacctinfo(name account, name parent, int8_t kyc, int64_t max_subaccounts);
 
          [[eosio::action]]
-         void updaccount(name account, bool kyc, uint16_t max_children);
+         void updacctinfo(name account, uint8_t kyc, int64_t max_subaccounts);
+
+         [[eosio::action]]
+         void updparent(name account, name parent, name new_parent);
+
+         [[eosio::action]]
+         void setwparams(worbli_params& params);
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
