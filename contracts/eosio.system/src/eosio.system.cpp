@@ -8,6 +8,7 @@
 #include "exchange_state.cpp"
 #include "rex.cpp"
 #include "worbli.cpp"
+#include "cleanup.cpp"
 
 namespace eosiosystem {
 
@@ -384,6 +385,8 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // worbli admin
      (setprods)
      // worbli.cpp
-     (addacctinfo)(updacctinfo)(updparent)(setwparams)(test)
+     (addacctinfo)(updacctinfo)(updparent)(setwparams)
+     // cleanup.cpp
+     (migrate)
 )
 

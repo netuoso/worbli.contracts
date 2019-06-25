@@ -549,6 +549,10 @@ namespace eosiosystem {
          [[eosio::action]]
          void setwparams(worbli_params& params);
 
+         // functions defined in cleanup.cpp
+         [[eosio::action]]
+         void migrate();
+
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
          using setacctnet_action = eosio::action_wrapper<"setacctnet"_n, &system_contract::setacctnet>;
