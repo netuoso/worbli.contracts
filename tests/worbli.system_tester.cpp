@@ -166,6 +166,12 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "exchange_state", data, abi_serializer_max_time );
    }
 
+   fc::variant get_accountinfo(const account_name& act) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(accountinfo1), act );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account_info", data, abi_serializer_max_time );
+   }
+
    action_result create( account_name issuer,
                 asset        maximum_supply ) {
 
@@ -605,6 +611,67 @@ BOOST_FIXTURE_TEST_CASE( test_fix_list_producers, worbli_system_tester ) try {
 
       producer_keys = t.control->head_block_state()->active_schedule.producers;
       BOOST_REQUIRE_EQUAL( "prod1", producer_keys[0].producer_name);
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( test_account_info, worbli_system_tester ) try {
+   create_account_with_resources(N(parent1), N(worbli.admin));
+   transfer(N(worbli.admin), N(parent1), asset(50000000, symbol(4,"TST")), "");
+
+   // global max_subaccounts = 0 and user max_subaccounts = -1 (defer to global)
+   // attempt should fail
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources(N(child1), N(parent1)),
+                            eosio_assert_message_exception, eosio_assert_message_is("subaccount limit reached"));
+
+   // set global limit to 1 subaccount
+   BOOST_REQUIRE_EQUAL( success(), push_system_action( N(eosio), N(setwparams), mvo() ("max_subaccounts", 1)));
+   create_account_with_resources(N(child1), N(parent1));
+
+   // 2nd subaccount should fail
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources(N(child2), N(parent1)),
+                            eosio_assert_message_exception, eosio_assert_message_is("subaccount limit reached"));
+
+   // child not allowed to create subaccount (kyc = 0)
+   transfer(N(worbli.admin), N(child1), asset(50000000, symbol(4,"TST")), "");
+
+   REQUIRE_MATCHING_OBJECT( get_accountinfo(N(child1)), mvo()
+      ("account", "child1")
+      ("parent", "parent1")
+      ("kyc", 0)
+      ("max_subaccounts", -1)
+   );
+
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources(N(child1child), N(child1)),
+                            eosio_assert_message_exception, eosio_assert_message_is("not permitted to create subaccounts"));
+
+   // test user specific limits
+   // set parent1 specific limit = 2
+   BOOST_REQUIRE_EQUAL( success(), push_system_action( N(worbli.admin), N(updacctinfo), mvo()
+                                       ("account", "parent1")
+                                       ("kyc", 1)
+                                       ("max_subaccounts", 2)
+                                    )
+                     );
+   // set global limit = 1 parent 1 limit = 2.  parent 1 has one subaccount already
+   // this should succeed
+   create_account_with_resources(N(child2), N(parent1));
+
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources(N(child3), N(parent1)),
+                            eosio_assert_message_exception, eosio_assert_message_is("subaccount limit reached"));
+
+   // set global max_subaccounts = 3
+   BOOST_REQUIRE_EQUAL( success(), push_system_action( N(eosio), N(setwparams), mvo() ("max_subaccounts", 3)));
+
+   // should still fail. When account specific limit is set it supercedes global
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources(N(child3), N(parent1)),
+                            eosio_assert_message_exception, eosio_assert_message_is("subaccount limit reached"));
+
+   // confirm same behavior when eosio creates accounts.
+   transfer(N(worbli.admin), N(eosio), asset(50000000, symbol(4,"TST")), "");
+   create_account_with_resources(N(parent2), N(eosio));
+   create_account_with_resources(N(parent3), N(eosio));
+   create_account_with_resources(N(parent4), N(eosio));
+   create_account_with_resources(N(parent5), N(eosio));
 
 } FC_LOG_AND_RETHROW()
 
