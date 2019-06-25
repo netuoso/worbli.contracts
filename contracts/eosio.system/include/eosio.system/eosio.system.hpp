@@ -547,7 +547,7 @@ namespace eosiosystem {
          void updparent(name account, name parent, name new_parent);
 
          [[eosio::action]]
-         void setwparams(worbli_params& params);
+         void setwparams(uint64_t max_subaccounts);
 
          // functions defined in cleanup.cpp
          [[eosio::action]]

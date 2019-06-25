@@ -52,10 +52,9 @@ namespace eosiosystem {
         });
     }
 
-    void system_contract::setwparams(worbli_params& params) {
+    void system_contract::setwparams(uint64_t max_subaccounts) {
       require_auth( _self );
-      (worbli_params&)(_wstate) = params;
-      _worbliparams.set( _wstate, _self );
+      _wstate.max_subaccounts = max_subaccounts;
     }
 
    // worbli additions
