@@ -3,22 +3,7 @@ namespace eosiosystem {
     void system_contract::addacctinfo(name account, name parent, int8_t kyc,
                                      int64_t max_subaccounts) {
         require_auth("worbli.admin"_n);    
-
-        auto act_itr = _account_info.find(account.value);
-        eosio_assert( act_itr == _account_info.end(), "account_info record exists, please call updacctinfo" ); 
-
-        subaccount_table subaccounts(_self, parent.value);
-
-        _account_info.emplace(parent, [&]( auto& item ) {
-            item.account = account;
-            item.parent = parent;
-            item.kyc = kyc;
-            item.max_subaccounts = max_subaccounts;
-        });
-
-        subaccounts.emplace(parent, [&]( auto& item ) {
-            item.account = account;
-        });
+        create_account_records(account, parent, kyc, max_subaccounts);
     }
 
     void system_contract::updacctinfo(name account, uint8_t kyc, 
@@ -43,7 +28,7 @@ namespace eosiosystem {
             item.parent = new_parent;
         });
 
-        subaccount_table subaccounts_old(_self, act_itr->parent.value);
+        subaccount_table subaccounts_old(_self, parent.value);
         auto sub_itr = subaccounts_old.find(account.value);
         eosio_assert( sub_itr != subaccounts_old.end(), "subaccount record not found" );
         subaccounts_old.erase(sub_itr);
