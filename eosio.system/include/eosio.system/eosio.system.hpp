@@ -161,6 +161,8 @@ namespace eosiosystem {
          eosio_global_state      _gstate;
          rammarket               _rammarket;
          account_info_table      _account_info;
+         worbli_params_singleton _worbliparams;
+         worbli_params           _wstate;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -303,10 +305,20 @@ namespace eosiosystem {
 
          // functions defined in worbli.cpp
          [[eosio::action]]
-         void addaccount(name account, name parent, bool kyc, std::vector<name> children);
+         void addacctinfo(name account, name parent, int8_t kyc, int64_t max_subaccounts);
 
          [[eosio::action]]
-         void updaccount(name account, bool kyc);
+         void updacctinfo(name account, uint8_t kyc, int64_t max_subaccounts);
+
+         [[eosio::action]]
+         void updparent(name account, name parent, name new_parent);
+
+         [[eosio::action]]
+         void setwparams(uint64_t max_subaccounts);
+
+         // functions defined in cleanup.cpp
+         [[eosio::action]]
+         void migrate();
 
       private:
          // Implementation details:

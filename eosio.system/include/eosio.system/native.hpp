@@ -135,5 +135,10 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
+
+         // worbli.cpp
+         void can_create_subaccount(name creator);
+         void create_account_records(name account, name parent, int8_t kyc,
+                                     int64_t max_subaccounts);
    };
 }
