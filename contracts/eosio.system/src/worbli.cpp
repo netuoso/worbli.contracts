@@ -9,14 +9,14 @@ namespace eosiosystem {
 
         subaccount_table subaccounts(_self, parent.value);
 
-        _account_info.emplace(_self, [&]( auto& item ) {
+        _account_info.emplace(parent, [&]( auto& item ) {
             item.account = account;
             item.parent = parent;
             item.kyc = kyc;
             item.max_subaccounts = max_subaccounts;
         });
 
-        subaccounts.emplace(_self, [&]( auto& item ) {
+        subaccounts.emplace(parent, [&]( auto& item ) {
             item.account = account;
         });
     }
@@ -27,7 +27,7 @@ namespace eosiosystem {
         auto itr = _account_info.find(account.value);
         eosio_assert( itr != _account_info.end(), "account_info record not found" );
 
-        _account_info.modify( *itr, _self, [&]( auto& item ) {
+        _account_info.modify( *itr, same_payer, [&]( auto& item ) {
             item.kyc = kyc;
             item.max_subaccounts = max_subaccounts;
         });
@@ -39,11 +39,13 @@ namespace eosiosystem {
 
         auto act_itr = _account_info.find(account.value);
         eosio_assert( act_itr != _account_info.end(), "account_info record not found" );
+        _account_info.modify( *act_itr, new_parent, [&]( auto& item ) {
+            item.parent = new_parent;
+        });
 
         subaccount_table subaccounts_old(_self, act_itr->parent.value);
         auto sub_itr = subaccounts_old.find(account.value);
-        eosio_assert( sub_itr != subaccounts_old.end(), "worbli data corrupt: subaccount record not found" );
-
+        eosio_assert( sub_itr != subaccounts_old.end(), "subaccount record not found" );
         subaccounts_old.erase(sub_itr);
 
         subaccount_table subaccounts_new(_self, new_parent.value);
@@ -89,14 +91,14 @@ namespace eosiosystem {
 
         subaccount_table subaccounts(_self, parent.value);
 
-        accountinfo.emplace(_self, [&]( auto& item ) {
+        accountinfo.emplace(parent, [&]( auto& item ) {
             item.account = account;
             item.parent = parent;
             item.kyc = kyc;
             item.max_subaccounts = max_subaccounts;
         });
 
-        subaccounts.emplace(_self, [&]( auto& item ) {
+        subaccounts.emplace(parent, [&]( auto& item ) {
             item.account = account;
         });
     }
