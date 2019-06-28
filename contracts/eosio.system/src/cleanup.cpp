@@ -16,11 +16,8 @@ namespace eosiosystem {
             ite = account_info_old.erase(ite);
         }
 
-
-        print("fuckye\n");
         // insert new values
         for ( auto& info : existing ) {
-            print("account: ", info.account);
             _account_info.emplace(_self, [&]( auto& item ) {
                 item.account = info.account;
                 item.parent = info.parent;
@@ -28,7 +25,6 @@ namespace eosiosystem {
                 item.max_subaccounts = -1;
             });
 
-            print("name: ", info.account, " , children count: ", info.children.size());
             subaccount_table subaccounts(_self, info.account.value);
             for ( auto& sub : info.children ) {
                 subaccounts.emplace(_self, [&]( auto& item ) {
