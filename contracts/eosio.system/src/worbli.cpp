@@ -83,9 +83,11 @@ namespace eosiosystem {
             item.max_subaccounts = max_subaccounts;
         });
 
+        auto sub_itr = subaccounts.find(account.value);
+        if(sub_itr != subaccounts.end()) return;
+
         subaccounts.emplace(parent, [&]( auto& item ) {
             item.account = account;
         });
     }
-
 }
