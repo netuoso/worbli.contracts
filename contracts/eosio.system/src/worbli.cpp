@@ -1,5 +1,41 @@
 namespace eosiosystem {
 
+   /**
+    *  This method will create a producer_config and producer_info object for 'producer'
+    *
+    *  @pre producer is not already registered
+    *  @pre producer to register is an account
+    *  @pre authority of eosio to register
+    *
+    */
+   void system_contract::addproducer( const name producer ) {
+      check( producer != "worbli.admin"_n, "producer should not be worbli.admin" );
+      check( producer != "eosio"_n, "producer should not be eosio" );
+      require_auth( "worbli.admin"_n );
+
+      auto prod = _producers.find( producer.value );
+
+      check( prod == _producers.end(), "account already registered as a producer" );
+
+      _producers.emplace( producer, [&]( producer_info& info ){
+            info.owner         = producer;
+            info.is_active     = false;
+      });
+   }
+
+   /**
+    *  This method will update the key and active flag to true in producer_info object for 'producer'
+    *
+    *  @pre producer is already registered
+    *  @pre authority of producer to update
+    *
+    */
+   void system_contract::togglesched( bool is_active ) {
+      require_auth( _self );
+      _gstate.is_producer_schedule_active = is_active;
+
+   }
+
     void system_contract::addacctinfo(name account, name parent, int8_t kyc,
                                      int64_t max_subaccounts) {
         require_auth("worbli.admin"_n);    

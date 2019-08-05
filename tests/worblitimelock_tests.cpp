@@ -203,16 +203,12 @@ BOOST_FIXTURE_TEST_CASE( create_tests, worblitimelock_tester ) try {
       ("issuer", "eosio")
    );
 
-   std::cout << "fucky: " << std::endl;
-
    // make sure contract is funded
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "no balance object found" ),
       add_recipient( N(founder1), core_sym::from_string("50000000.0000"), 
                                vector<account_name>{}
       )
    );   
-
-   std::cout << "fucky: " << std::endl;
 
    transfer("eosio", "founders", core_sym::from_string("1.0000"), "escrow funding");
 

@@ -24,29 +24,6 @@ namespace eosiosystem {
    using eosio::transaction;
 
    /**
-    *  This method will create a producer_config and producer_info object for 'producer'
-    *
-    *  @pre producer is not already registered
-    *  @pre producer to register is an account
-    *  @pre authority of eosio to register
-    *
-    */
-   void system_contract::addproducer( const name producer ) {
-      check( producer != "worbli.admin"_n, "producer should not be worbli.admin" );
-      check( producer != "eosio"_n, "producer should not be eosio" );
-      require_auth( "worbli.admin"_n );
-
-      auto prod = _producers.find( producer.value );
-
-      check( prod == _producers.end(), "account already registered as a producer" );
-
-      _producers.emplace( producer, [&]( producer_info& info ){
-            info.owner         = producer;
-            info.is_active     = false;
-      });
-   }
-
-   /**
     *  This method will update the key and active flag to true in producer_info object for 'producer'
     *
     *  @pre producer is already registered
@@ -59,15 +36,45 @@ namespace eosiosystem {
       require_auth( producer );
 
       auto prod = _producers.find( producer.value );
+      const auto ct = current_time_point();
 
       check( prod != _producers.end(), "account is not registered as a producer" );
-
-      _producers.modify( prod, producer, [&]( producer_info& info ){
+      if ( prod != _producers.end() ) {
+         _producers.modify( prod, producer, [&]( producer_info& info ){
             info.producer_key = producer_key;
             info.is_active    = true;
             info.url          = url;
             info.location     = location;
-      });
+            // if ( info.last_claim_time == time_point() )
+            //   info.last_claim_time = ct;
+         });
+         /**
+         auto prod2 = _producers2.find( producer.value );
+         if ( prod2 == _producers2.end() ) {
+            _producers2.emplace( producer, [&]( producer_info2& info ){
+               info.owner                     = producer;
+               info.last_votepay_share_update = ct;
+            });
+            update_total_votepay_share( ct, 0.0, prod->total_votes );
+            // When introducing the producer2 table row for the first time, the producer's votes must also be accounted for in the global total_producer_votepay_share at the same time.
+         }
+      } else {
+         _producers.emplace( producer, [&]( producer_info& info ){
+            info.owner           = producer;
+            info.total_votes     = 0;
+            info.producer_key    = producer_key;
+            info.is_active       = true;
+            info.url             = url;
+            info.location        = location;
+            info.last_claim_time = ct;
+         });
+         _producers2.emplace( producer, [&]( producer_info2& info ){
+            info.owner                     = producer;
+            info.last_votepay_share_update = ct;
+         });
+         **/
+      }
+
    }
 
    void system_contract::unregprod( const name producer ) {
@@ -79,29 +86,28 @@ namespace eosiosystem {
       });
    }
 
-   /**
-    *  This method will update the key and active flag to true in producer_info object for 'producer'
-    *
-    *  @pre producer is already registered
-    *  @pre authority of producer to update
-    *
-    */
-   void system_contract::togglesched( bool is_active ) {
-      require_auth( _self );
-      _gstate.is_producer_schedule_active = is_active;
-
-   }
-
    void system_contract::update_producers( block_timestamp block_time ) {
       _gstate.last_producer_schedule_update = block_time;
 
+      //auto idx = _producers.get_index<"prototalvote"_n>();
+
       std::vector< std::pair<eosio::producer_key,uint16_t> > top_producers;
+      /**
+      top_producers.reserve(21);
+
+      for ( auto it = idx.cbegin(); it != idx.cend() && top_producers.size() < 21 && 0 < it->total_votes && it->active(); ++it ) {
+         top_producers.emplace_back( std::pair<eosio::producer_key,uint16_t>({{it->owner, it->producer_key}, it->location}) );
+      }
+
+      if ( top_producers.size() < _gstate.last_producer_schedule_size ) {
+         return;
+      }
+      **/
 
       for( const auto& p : _producers ) {
         if( p.is_active )
             top_producers.emplace_back( std::pair<eosio::producer_key,uint16_t>({{p.owner, p.producer_key}, p.location}) );
       }
-
       /// sort by producer name
       std::sort( top_producers.begin(), top_producers.end() );
 
@@ -117,5 +123,4 @@ namespace eosiosystem {
          _gstate.last_producer_schedule_size = static_cast<decltype(_gstate.last_producer_schedule_size)>( top_producers.size() );
       }
    }
-
 } /// namespace eosiosystem

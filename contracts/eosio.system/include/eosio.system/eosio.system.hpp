@@ -58,7 +58,30 @@ namespace eosiosystem {
       else
          return ( flags & ~static_cast<F>(field) );
    }
+/**
+   struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
+     name            newname;
+     name            high_bidder;
+     int64_t         high_bid = 0; ///< negative high_bid == closed auction waiting to be claimed
+     time_point      last_bid_time;
 
+     uint64_t primary_key()const { return newname.value;                    }
+     uint64_t by_high_bid()const { return static_cast<uint64_t>(-high_bid); }
+   };
+
+   struct [[eosio::table, eosio::contract("eosio.system")]] bid_refund {
+      name         bidder;
+      asset        amount;
+
+      uint64_t primary_key()const { return bidder.value; }
+   };
+
+   typedef eosio::multi_index< "namebids"_n, name_bid,
+                               indexed_by<"highbid"_n, const_mem_fun<name_bid, uint64_t, &name_bid::by_high_bid>  >
+                             > name_bid_table;
+
+   typedef eosio::multi_index< "bidrefunds"_n, bid_refund > bid_refund_table;
+**/
    struct [[eosio::table("global"), eosio::contract("eosio.system")]] eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
 
@@ -67,11 +90,16 @@ namespace eosiosystem {
       int64_t              total_ram_stake = 0;
 
       block_timestamp      last_producer_schedule_update;
+      //time_point           last_pervote_bucket_fill;
+      //int64_t              pervote_bucket = 0;
+      //int64_t              perblock_bucket = 0;
+      //uint32_t             total_unpaid_blocks = 0; /// all blocks which have been produced but not paid
       time_point           last_inflation_distribution;
       int64_t              total_activated_stake = 0;
       time_point           thresh_activated_stake_time;
       uint16_t             last_producer_schedule_size = 0;
       double               total_producer_vote_weight = 0; /// the sum of all producer votes
+      //block_timestamp      last_name_close;
       bool                 is_producer_schedule_active = false;
       uint8_t              network_usage_level = 0;
 
@@ -83,8 +111,33 @@ namespace eosiosystem {
                                 (is_producer_schedule_active)(network_usage_level) )
    };
 
+   /**
+    * Defines new global state parameters added after version 1.0
+    *
+   struct [[eosio::table("global2"), eosio::contract("eosio.system")]] eosio_global_state2 {
+      eosio_global_state2(){}
+
+      uint16_t          new_ram_per_block = 0;
+      block_timestamp   last_ram_increase;
+      block_timestamp   last_block_num;
+      double            total_producer_votepay_share = 0;
+      uint8_t           revision = 0; ///< used to track version updates in the future.
+
+      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)
+                        (total_producer_votepay_share)(revision) )
+   };
+
+   struct [[eosio::table("global3"), eosio::contract("eosio.system")]] eosio_global_state3 {
+      eosio_global_state3() { }
+      time_point        last_vpay_state_update;
+      double            total_vpay_share_change_rate = 0;
+
+      EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
+   };
+   **/
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                  owner;
+      //double                total_votes = 0;
       eosio::public_key     producer_key; /// a packed public key object
       bool                  is_active = true;
       std::string           url;
@@ -101,18 +154,18 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( producer_info, (owner)(producer_key)(is_active)(url)
                         (produced_blocks)(last_claim_time)(location) )
    };
-
-   struct [[eosio::table, eosio::contract("eosio.system")]] producer_pay {
-      name             owner;   
-      uint64_t         earned_pay;   
-      uint64_t         last_claim_time = 0;
+   /**
+   struct [[eosio::table, eosio::contract("eosio.system")]] producer_info2 {
+      name            owner;
+      double          votepay_share = 0;
+      time_point      last_votepay_share_update;
 
       uint64_t primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_pay, (owner)(earned_pay)(last_claim_time) )
+      EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
-
+   **/
    struct [[eosio::table, eosio::contract("eosio.system")]] voter_info {
       name                owner;     /// the voter
       name                proxy;     /// the proxy set by the voter, if any
@@ -152,14 +205,15 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
 
-   typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
 
    typedef eosio::multi_index< "producers"_n, producer_info,
                                indexed_by<"prolocation"_n, const_mem_fun<producer_info, double, &producer_info::by_location>  >   
                                > producers_table;
-
+   //typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
 
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
+   //typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
+   //typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
@@ -298,9 +352,6 @@ namespace eosiosystem {
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
 
          [[eosio::action]]
-         void setusagelvl( uint8_t new_level );
-
-         [[eosio::action]]
          void setacctram( name account, std::optional<int64_t> ram_bytes );
 
          [[eosio::action]]
@@ -319,10 +370,6 @@ namespace eosiosystem {
          [[eosio::action]]
          void delegatebw( name from, name receiver,
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
-
-         [[eosio::action]]
-         void delegateram( name from, name receiver,
-                          int64_t bytes );
 
          /**
           * Sets total_rent balance of REX pool to the passed value
@@ -503,12 +550,6 @@ namespace eosiosystem {
          void unregprod( const name producer );
 
          [[eosio::action]]
-         void addproducer( const name producer );
-
-         [[eosio::action]]
-         void togglesched( bool is_active );
-
-         [[eosio::action]]
          void setram( uint64_t max_ram_size );
          [[eosio::action]]
          void setramrate( uint16_t bytes_per_block );
@@ -531,12 +572,34 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void rmvproducer( name producer );
+/**
+         [[eosio::action]]
+         void updtrevision( uint8_t revision );
 
+         [[eosio::action]]
+         void bidname( name bidder, name newname, asset bid );
+
+         [[eosio::action]]
+         void bidrefund( name bidder, name newname );
+**/
          // worlbi admin
          [[eosio::action]]
          void setprods( std::vector<eosio::producer_key> schedule );
 
          // functions defined in worbli.cpp
+         [[eosio::action]]
+         void setusagelvl( uint8_t new_level );
+
+         [[eosio::action]]
+         void delegateram( name from, name receiver,
+                          int64_t bytes );
+
+         [[eosio::action]]
+         void addproducer( const name producer );
+
+         [[eosio::action]]
+         void togglesched( bool is_active );
+
          [[eosio::action]]
          void addacctinfo(name account, name parent, int8_t kyc, int64_t max_subaccounts);
 
@@ -650,11 +713,15 @@ namespace eosiosystem {
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+         //void update_voting_power( const name& voter, const asset& total_update );
 
          // defined in voting.hpp
          void update_producers( block_timestamp timestamp );
          void update_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
          void propagate_weight_change( const voter_info& voter );
+         /**double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
+                                               time_point ct,
+                                               double shares_rate, bool reset_to_zero = false );**/
          double update_total_votepay_share( time_point ct,
                                             double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
 
