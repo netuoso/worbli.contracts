@@ -582,10 +582,6 @@ namespace eosiosystem {
          [[eosio::action]]
          void bidrefund( name bidder, name newname );
 **/
-         // worlbi admin
-         [[eosio::action]]
-         void setprods( std::vector<eosio::producer_key> schedule );
-
          // functions defined in worbli.cpp
          [[eosio::action]]
          void setusagelvl( uint8_t new_level );
