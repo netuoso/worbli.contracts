@@ -1,5 +1,72 @@
 namespace eosiosystem {
 
+   void system_contract::delegateram( name from, name receiver,
+                                     int64_t bytes )
+   {
+      check( from == "worbli.admin"_n || from == _self, "action restricted to worbli.admin and create accounts" );
+      require_auth( from );
+      check( bytes >= 0, "must delegate a positive amount" );
+
+      const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
+      const uint64_t token_precision = token_supply.symbol.precision();
+      const uint64_t bytes_per_token = uint64_t((_gstate.max_ram_size / (double)token_supply.amount) * pow(10,token_precision));
+      auto amount = int64_t((bytes * pow(10,token_precision)) / bytes_per_token);
+
+      require_auth( from );
+      check( bytes != 0, "should stake non-zero amount" );
+
+
+      // update stake delegated from "from" to "receiver"
+      {
+         del_ram_table     del_tbl( _self, from.value);
+         auto itr = del_tbl.find( receiver.value );
+         if( itr == del_tbl.end() ) {
+            itr = del_tbl.emplace( from, [&]( auto& dbo ){
+                  dbo.from          = from;
+                  dbo.to            = receiver;
+                  dbo.ram_stake     = asset(amount, core_symbol());
+                  dbo.ram_bytes     = bytes;
+               });
+         }
+         else {
+            del_tbl.modify( itr, same_payer, [&]( auto& dbo ){
+                  dbo.ram_stake    += asset(amount, core_symbol());
+                  dbo.ram_bytes    += bytes;
+               });
+         }
+
+      } // itr can be invalid, should go out of scope
+
+      // update totals of "receiver"
+      {
+         user_resources_table   totals_tbl( _self, receiver.value );
+         auto tot_itr = totals_tbl.find( receiver.value );
+         if( tot_itr ==  totals_tbl.end() ) {
+            tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
+                  tot.owner = receiver;
+                  tot.ram_stake    = asset(amount, core_symbol());
+                  tot.ram_bytes    = bytes;
+               });
+         } else {
+            totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
+                  tot.ram_stake    += asset(amount, core_symbol());
+                  tot.ram_bytes    += bytes;
+               });
+         }
+         check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+         check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
+
+         set_resource_limits( receiver.value, tot_itr->ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+
+         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 && 
+              tot_itr->ram_stake.amount == 0 ) {
+            totals_tbl.erase( tot_itr );
+         }
+      } // tot_itr can be invalid, should go out of scope
+
+   } // delegateram
+
+
    /**
     *  This method will create a producer_config and producer_info object for 'producer'
     *

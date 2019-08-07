@@ -36,8 +36,7 @@ namespace eosiosystem {
       asset         ram_stake;
       int64_t       ram_bytes = 0;
 
-      bool is_empty()const { 
-         return net_weight.amount == 0 && cpu_weight.amount == 0 && 
+      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0 &&
                 ram_bytes == 0 && ram_stake.amount == 0; 
       }
       uint64_t primary_key()const { return owner.value; }
@@ -64,22 +63,6 @@ namespace eosiosystem {
 
    };
 
-      /**
-    *  Every user 'from' has a scope/table that uses every receipient 'to' as the primary key.
-    */
-   struct [[eosio::table, eosio::contract("eosio.system")]] delegated_ram {
-      name          from;
-      name          to;
-      asset         ram_stake;
-      int64_t       ram_bytes = 0;
-
-      uint64_t  primary_key()const { return to.value; }
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( delegated_ram, (from)(to)(ram_stake)(ram_bytes) )
-
-   };
-
    struct [[eosio::table, eosio::contract("eosio.system")]] refund_request {
       name            owner;
       time_point_sec  request_time;
@@ -89,10 +72,7 @@ namespace eosiosystem {
       uint64_t        ram_bytes;
 
 
-      bool is_empty()const { 
-         return net_amount.amount == 0 && cpu_amount.amount == 0 &&
-                ram_amount.amount == 0 && ram_bytes == 0; 
-      }
+      bool is_empty()const { return net_amount.amount == 0 && cpu_amount.amount == 0 && ram_amount.amount == 0 && ram_bytes == 0; }
       uint64_t  primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -105,7 +85,6 @@ namespace eosiosystem {
     */
    typedef eosio::multi_index< "userres"_n, user_resources >      user_resources_table;
    typedef eosio::multi_index< "delband"_n, delegated_bandwidth > del_bandwidth_table;
-   typedef eosio::multi_index< "delram"_n, delegated_ram >        del_ram_table;
    typedef eosio::multi_index< "refunds"_n, refund_request >      refunds_table;
 
 
@@ -508,8 +487,35 @@ namespace eosiosystem {
          }
       }
 
+      //vote_stake_updater( from );
+      //update_voting_power( from, stake_net_delta + stake_cpu_delta );
    }
+/**
+   void system_contract::update_voting_power( const name& voter, const asset& total_update )
+   {
+      auto voter_itr = _voters.find( voter.value );
+      if( voter_itr == _voters.end() ) {
+         voter_itr = _voters.emplace( voter, [&]( auto& v ) {
+            v.owner  = voter;
+            v.staked = total_update.amount;
+         });
+      } else {
+         _voters.modify( voter_itr, same_payer, [&]( auto& v ) {
+            v.staked += total_update.amount;
+         });
+      }
 
+      check( 0 <= voter_itr->staked, "stake for voting cannot be negative" );
+
+      if( voter == "b1"_n ) {
+         validate_b1_vesting( voter_itr->staked );
+      }
+
+      if( voter_itr->producers.size() || voter_itr->proxy ) {
+         update_votes( voter, voter_itr->proxy, voter_itr->producers, false );
+      }
+   }
+**/
    void system_contract::delegatebw( name from, name receiver,
                                      asset stake_net_quantity,
                                      asset stake_cpu_quantity, bool transfer )
@@ -535,72 +541,6 @@ namespace eosiosystem {
 
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
    } // undelegatebw
-
-   void system_contract::delegateram( name from, name receiver,
-                                     int64_t bytes )
-   {
-      check( from == "worbli.admin"_n || from == _self, "action restricted to worbli.admin and create accounts" );
-      require_auth( from );
-      check( bytes >= 0, "must delegate a positive amount" );
-
-      const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
-      const uint64_t token_precision = token_supply.symbol.precision();
-      const uint64_t bytes_per_token = uint64_t((_gstate.max_ram_size / (double)token_supply.amount) * pow(10,token_precision));
-      auto amount = int64_t((bytes * pow(10,token_precision)) / bytes_per_token);
-
-      require_auth( from );
-      check( bytes != 0, "should stake non-zero amount" );
-
-
-      // update stake delegated from "from" to "receiver"
-      {
-         del_ram_table     del_tbl( _self, from.value);
-         auto itr = del_tbl.find( receiver.value );
-         if( itr == del_tbl.end() ) {
-            itr = del_tbl.emplace( from, [&]( auto& dbo ){
-                  dbo.from          = from;
-                  dbo.to            = receiver;
-                  dbo.ram_stake     = asset(amount, core_symbol());
-                  dbo.ram_bytes     = bytes;
-               });
-         }
-         else {
-            del_tbl.modify( itr, same_payer, [&]( auto& dbo ){
-                  dbo.ram_stake    += asset(amount, core_symbol());
-                  dbo.ram_bytes    += bytes;
-               });
-         }
-
-      } // itr can be invalid, should go out of scope
-
-      // update totals of "receiver"
-      {
-         user_resources_table   totals_tbl( _self, receiver.value );
-         auto tot_itr = totals_tbl.find( receiver.value );
-         if( tot_itr ==  totals_tbl.end() ) {
-            tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
-                  tot.owner = receiver;
-                  tot.ram_stake    = asset(amount, core_symbol());
-                  tot.ram_bytes    = bytes;
-               });
-         } else {
-            totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
-                  tot.ram_stake    += asset(amount, core_symbol());
-                  tot.ram_bytes    += bytes;
-               });
-         }
-         check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
-         check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
-
-         set_resource_limits( receiver.value, tot_itr->ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
-
-         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 && 
-              tot_itr->ram_stake.amount == 0 ) {
-            totals_tbl.erase( tot_itr );
-         }
-      } // tot_itr can be invalid, should go out of scope
-
-   } // delegateram
 
 
    void system_contract::refund( const name owner ) {

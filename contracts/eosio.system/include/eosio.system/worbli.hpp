@@ -4,6 +4,22 @@ namespace eosiosystem {
 
    using eosio::time_point;
 
+      /**
+    *  Every user 'from' has a scope/table that uses every receipient 'to' as the primary key.
+    */
+   struct [[eosio::table, eosio::contract("eosio.system")]] delegated_ram {
+      name          from;
+      name          to;
+      asset         ram_stake;
+      int64_t       ram_bytes = 0;
+
+      uint64_t  primary_key()const { return to.value; }
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( delegated_ram, (from)(to)(ram_stake)(ram_bytes) )
+
+   };
+
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_pay {
       name             owner;
       uint64_t         earned_pay;
@@ -43,7 +59,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( subaccount, (account) )
    };
 
-
+   typedef eosio::multi_index< "delram"_n, delegated_ram >        del_ram_table;
    typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
    typedef eosio::singleton< "worbliglobal"_n, worbli_params >   worbli_params_singleton;
    typedef eosio::multi_index< "accountinfo1"_n, account_info >  account_info_table;
