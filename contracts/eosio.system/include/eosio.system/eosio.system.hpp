@@ -1,7 +1,3 @@
-/**
- *  @file
- *  @copyright defined in eos/LICENSE.txt
- */
 #pragma once
 
 #include <eosio.system/native.hpp>
@@ -308,17 +304,22 @@ namespace eosiosystem {
       private:
          voters_table            _voters;
          producers_table         _producers;
-         producer_pay_table      _producer_pay;
+         //producers_table2        _producers2;
          global_state_singleton  _global;
+         //global_state2_singleton _global2;
+         //global_state3_singleton _global3;
          eosio_global_state      _gstate;
+         //eosio_global_state2     _gstate2;
+         //eosio_global_state3     _gstate3;
          rammarket               _rammarket;
-         account_info_table      _account_info;
          rex_pool_table          _rexpool;
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
+         producer_pay_table      _producer_pay;
          worbli_params_singleton _worbliparams;
          worbli_params           _wstate;
+         account_info_table      _account_info;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -481,10 +482,10 @@ namespace eosiosystem {
           */
          [[eosio::action]]
          void mvtosavings( const name& owner, const asset& rex );
-         
+
          /**
           * Moves a specified amount of REX out of savings bucket. The moved amount
-          * will have the regular REX maturity period of 4 days.  
+          * will have the regular REX maturity period of 4 days.
           */
          [[eosio::action]]
          void mvfrsavings( const name& owner, const asset& rex );
@@ -649,6 +650,9 @@ namespace eosiosystem {
          using regproxy_action = eosio::action_wrapper<"regproxy"_n, &system_contract::regproxy>;
          using claimrewards_action = eosio::action_wrapper<"claimrewards"_n, &system_contract::claimrewards>;
          using rmvproducer_action = eosio::action_wrapper<"rmvproducer"_n, &system_contract::rmvproducer>;
+         //using updtrevision_action = eosio::action_wrapper<"updtrevision"_n, &system_contract::updtrevision>;
+         //using bidname_action = eosio::action_wrapper<"bidname"_n, &system_contract::bidname>;
+         //using bidrefund_action = eosio::action_wrapper<"bidrefund"_n, &system_contract::bidrefund>;
          using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
@@ -729,7 +733,7 @@ namespace eosiosystem {
                   template <typename... Args>
                   static constexpr void call( system_contract* this_contract, Args&&... args )
                   {
-                     std::invoke( P, this_contract, std::forward<Args>(args)... );
+                     std::invoke( P, this_contract, args... );
                      for_each<Ps...>::call( this_contract, std::forward<Args>(args)... );
                   }
                };

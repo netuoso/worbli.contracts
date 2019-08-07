@@ -1,7 +1,3 @@
-/**
- *  @file
- *  @copyright defined in eos/LICENSE.txt
- */
 #include <eosio.system/eosio.system.hpp>
 
 #include <eosiolib/eosio.hpp>
@@ -91,152 +87,114 @@ namespace eosiosystem {
 
    /**
     *  This action will buy an exact amount of ram and bill the payer the current market price.
-    */
+    *
    void system_contract::buyrambytes( name payer, name receiver, uint32_t bytes ) {
-      const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
-      const uint64_t token_precision = token_supply.symbol.precision();
-      const uint64_t bytes_per_token = uint64_t((_gstate.max_ram_size / (double)token_supply.amount) * pow(10,token_precision));
-      
-      auto eosout = int64_t((bytes * pow(10,token_precision)) / bytes_per_token);
 
-      buyram( payer, receiver, asset(eosout, core_symbol()) );
+      auto itr = _rammarket.find(ramcore_symbol.raw());
+      auto tmp = *itr;
+      auto eosout = tmp.convert( asset(bytes, ram_symbol), core_symbol() );
+
+      buyram( payer, receiver, eosout );
    }
 
 
-  void system_contract::buyram( name payer, name receiver, asset quant ) {
+   **
+    *  When buying ram the payer irreversiblly transfers quant to system contract and only
+    *  the receiver may reclaim the tokens via the sellram action. The receiver pays for the
+    *  storage of all database records associated with this action.
+    *
+    *  RAM is a scarce resource whose supply is defined by global properties max_ram_size. RAM is
+    *  priced using the bancor algorithm such that price-per-byte with a constant reserve ratio of 100:1.
+    *
+   void system_contract::buyram( name payer, name receiver, asset quant )
+   {
       require_auth( payer );
-      
-      account_info_table accounts_tbl(_self, _self.value);
-      auto itr = accounts_tbl.find(payer.value);
-      bool can_create = itr == accounts_tbl.end() ? false : itr->kyc;
+      update_ram_supply();
 
-      check( payer == "worbli.admin"_n || payer == _self || can_create,
-             "account not authorized to buy RAM" );
       check( quant.symbol == core_symbol(), "must buy ram with core token" );
       check( quant.amount > 0, "must purchase a positive amount" );
 
-      const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
-      const uint64_t token_precision = token_supply.symbol.precision();
-      const uint64_t bytes_per_token = uint64_t(((_gstate.max_ram_size * pow(10,token_precision)) / (double)token_supply.amount) );
-      
-      uint64_t bytes_out = uint64_t(bytes_per_token * quant.amount / pow(10,token_precision));
-    
-      _gstate.total_ram_bytes_reserved += uint64_t(bytes_out);
-      _gstate.total_ram_stake          += quant.amount;
+      auto fee = quant;
+      fee.amount = ( fee.amount + 199 ) / 200; /// .5% fee (round up)
+      // fee.amount cannot be 0 since that is only possible if quant.amount is 0 which is not allowed by the assert above.
+      // If quant.amount == 1, then fee.amount == 1,
+      // otherwise if quant.amount > 1, then 0 < fee.amount < quant.amount.
+      auto quant_after_fee = quant;
+      quant_after_fee.amount -= fee.amount;
+      // quant_after_fee.amount should be > 0 if quant.amount > 1.
+      // If quant.amount == 1, then quant_after_fee.amount == 0 and the next inline transfer will fail causing the buyram action to fail.
 
-        user_resources_table  userres( _self, receiver.value );
-        auto res_itr = userres.find( receiver.value );
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {payer, active_permission}, {ram_account, active_permission} },
+         { payer, ram_account, quant_after_fee, std::string("buy ram") }
+      );
 
-        if( res_itr ==  userres.end() ) {
-            res_itr = userres.emplace( receiver, [&]( auto& res ) {
-                  res.owner = receiver;
-                  res.net_weight = asset( 0, core_symbol() );
-                  res.cpu_weight = asset( 0, core_symbol() );
-                  res.ram_bytes = bytes_out;
-                  res.ram_stake = quant;
-                  });
-        } else {
-            userres.modify( res_itr, receiver, [&]( auto& res ) {
-                  res.ram_bytes += bytes_out;
-                  res.ram_stake += quant;
-                  });
-        }
-         
-        auto voter_itr = _voters.find( res_itr->owner.value );
-        if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
-           int64_t ram_bytes, net, cpu;
-           get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
-           set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
-        }
- 
-      // create refund or update from existing refund
-      if ( "eosio.stake"_n != receiver ) { //for eosio both transfer and refund make no sense
-         refunds_table refunds_tbl( _self, receiver.value );
-         auto req = refunds_tbl.find( receiver.value );
-
-         //create/update/delete refund
-         auto ram_balance = quant;
-         bool need_deferred_trx = false;
-
-         if ( req != refunds_tbl.end() ) { //need to update refund
-            refunds_tbl.modify( req, same_payer, [&]( refund_request& r ) {
-                r.request_time = current_time_point();
-                r.ram_amount -= ram_balance;
-                r.ram_bytes -= bytes_out;
-                if ( r.ram_amount.amount < 0 ) {
-                   ram_balance = -r.ram_amount;
-                   r.ram_amount.amount = 0;
-                   r.ram_bytes = 0;
-                } else {
-                   ram_balance.amount = 0;
-                }                  
-             });
-
-             check( 0 <= req->ram_amount.amount, "negative ram refund amount" ); //should never happen
-
-             if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 && req->ram_bytes == 0 &&
-                req->ram_amount.amount == 0 ) {
-                refunds_tbl.erase( req );
-                need_deferred_trx = false;
-             } else {
-                need_deferred_trx = true;
-             }
-         } 
-
-         if ( need_deferred_trx ) {
-            eosio::transaction out;
-            out.actions.emplace_back( permission_level{ receiver, active_permission }, _self, "refund"_n, receiver );
-            out.delay_sec = refund_delay_sec;
-            cancel_deferred( receiver.value ); // TODO: Remove this line when replacing deferred trxs is fixed
-            out.send( receiver.value, receiver, true );
-         } else {
-            cancel_deferred( receiver.value );
-         }
-
-         auto transfer_amount = ram_balance;
-         if ( 0 < transfer_amount.amount ) {
-            INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, {payer, active_permission},
-               { payer, stake_account, asset(transfer_amount), std::string("stake ram") } );
-         }
+      if( fee.amount > 0 ) {
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {payer, active_permission} },
+            { payer, ramfee_account, fee, std::string("ram fee") }
+         );
+         channel_to_rex( ramfee_account, fee );
       }
-  }
 
-  /**
+      int64_t bytes_out;
+
+      const auto& market = _rammarket.get(ramcore_symbol.raw(), "ram market does not exist");
+      _rammarket.modify( market, same_payer, [&]( auto& es ) {
+          bytes_out = es.convert( quant_after_fee,  ram_symbol ).amount;
+      });
+
+      check( bytes_out > 0, "must reserve a positive amount" );
+
+      _gstate.total_ram_bytes_reserved += uint64_t(bytes_out);
+      _gstate.total_ram_stake          += quant_after_fee.amount;
+
+      user_resources_table  userres( _self, receiver.value );
+      auto res_itr = userres.find( receiver.value );
+      if( res_itr ==  userres.end() ) {
+         res_itr = userres.emplace( receiver, [&]( auto& res ) {
+               res.owner = receiver;
+               res.net_weight = asset( 0, core_symbol() );
+               res.cpu_weight = asset( 0, core_symbol() );
+               res.ram_bytes = bytes_out;
+            });
+      } else {
+         userres.modify( res_itr, receiver, [&]( auto& res ) {
+               res.ram_bytes += bytes_out;
+            });
+      }
+
+      auto voter_itr = _voters.find( res_itr->owner.value );
+      if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+         int64_t ram_bytes, net, cpu;
+         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      }
+   }
+
+  **
     *  The system contract now buys and sells RAM allocations at prevailing market prices.
     *  This may result in traders buying RAM today in anticipation of potential shortages
     *  tomorrow. Overall this will result in the market balancing the supply and demand
     *  for RAM over time.
-    */
+    *
    void system_contract::sellram( name account, int64_t bytes ) {
       require_auth( account );
+      update_ram_supply();
+
       check( bytes > 0, "cannot sell negative byte" );
-      int64_t delegated_ram_bytes = 0;
-
-      // lookup delegated from worbli.admin
-      del_ram_table  delram_admin( _self, "worbli.admin"_n.value );
-      auto ram_itr = delram_admin.find( account.value );
-
-      if(ram_itr != delram_admin.end())
-            delegated_ram_bytes += ram_itr->ram_bytes;
-
-      // lookup delegated from eosio
-      del_ram_table  delram_eosio( _self, _self.value );
-      ram_itr = delram_eosio.find( account.value );
-
-      if(ram_itr != delram_eosio.end())
-            delegated_ram_bytes += ram_itr->ram_bytes;
 
       user_resources_table  userres( _self, account.value );
       auto res_itr = userres.find( account.value );
       check( res_itr != userres.end(), "no resource row" );
-      check( res_itr->ram_bytes - delegated_ram_bytes >= bytes, "insufficient quota" );
-       
-      asset tokens_out;
-      int64_t ram_bytes = res_itr->ram_bytes;
-      float_t token_per_bytes = res_itr->ram_stake.amount / (float_t)(ram_bytes);
-      int64_t tokens = token_per_bytes * bytes;
+      check( res_itr->ram_bytes >= bytes, "insufficient quota" );
 
-      tokens_out = asset(tokens, core_symbol());
+      asset tokens_out;
+      auto itr = _rammarket.find(ramcore_symbol.raw());
+      _rammarket.modify( itr, same_payer, [&]( auto& es ) {
+          /// the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
+          tokens_out = es.convert( asset(bytes, ram_symbol), core_symbol());
+      });
 
       check( tokens_out.amount > 1, "token amount received from selling ram is too low" );
 
@@ -248,7 +206,6 @@ namespace eosiosystem {
 
       userres.modify( res_itr, account, [&]( auto& res ) {
           res.ram_bytes -= bytes;
-          res.ram_stake -= tokens_out;
       });
 
       auto voter_itr = _voters.find( res_itr->owner.value );
@@ -256,58 +213,32 @@ namespace eosiosystem {
          int64_t ram_bytes, net, cpu;
          get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
          set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
-         
       }
-      
-            // create refund or update from existing refund
-      if ( "eosio.stake"_n != account ) { //for eosio both transfer and refund make no sense
-         refunds_table refunds_tbl( _self, account.value );
-         auto req = refunds_tbl.find( account.value );
 
-         //create/update/delete refund
-         auto ram_balance = tokens_out;
-         bool need_deferred_trx = false;
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {ram_account, active_permission}, {account, active_permission} },
+         { ram_account, account, asset(tokens_out), std::string("sell ram") }
+      );
 
-            if ( req != refunds_tbl.end() ) { //need to update refund
-               refunds_tbl.modify( req, same_payer, [&]( refund_request& r ) {
-                  r.request_time = current_time_point();
-                  r.ram_amount += ram_balance;   
-                  r.ram_bytes += bytes;               
-               });
-
-               if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 && req->ram_bytes == 0 &&
-                  req->ram_amount.amount == 0 ) {
-                  refunds_tbl.erase( req );
-                  need_deferred_trx = false;
-               } else {
-                  need_deferred_trx = true;
-               }
-
-            } else { //need to create refund
-               refunds_tbl.emplace( account, [&]( refund_request& r ) {
-                  r.owner = account;
-                  r.ram_amount = ram_balance;
-                  r.ram_bytes = bytes;
-                  r.cpu_amount = asset( 0, core_symbol() );
-                  r.net_amount = asset( 0, core_symbol() );
-                  r.request_time = current_time_point();
-               });
-               need_deferred_trx = true;
-            } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl      
-
-         if ( need_deferred_trx ) {
-            eosio::transaction out;
-            out.actions.emplace_back( permission_level{ account, active_permission }, _self, "refund"_n, account );
-            out.delay_sec = refund_delay_sec;
-            cancel_deferred( account.value ); // TODO: Remove this line when replacing deferred trxs is fixed
-            out.send( account.value, account, true );
-         } else {
-            cancel_deferred( account.value );
-         }
+      auto fee = ( tokens_out.amount + 199 ) / 200; /// .5% fee (round up)
+      // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
+      if( fee > 0 ) {
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {account, active_permission} },
+            { account, ramfee_account, asset(fee, core_symbol()), std::string("sell ram fee") }
+         );
+         channel_to_rex( ramfee_account, asset(fee, core_symbol() ));
       }
-      // need to update voting power    
    }
 
+   void validate_b1_vesting( int64_t stake ) {
+      const int64_t base_time = 1527811200; /// 2018-06-01
+      const int64_t max_claimable = 100'000'000'0000ll;
+      const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
+
+      check( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
+   }
+**/
    void system_contract::changebw( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
    {
@@ -558,6 +489,225 @@ namespace eosiosystem {
       );
 
       refunds_tbl.erase( req );
+   }
+
+   /**
+    *  This action will buy an exact amount of ram and bill the payer the current market price.
+    */
+   void system_contract::buyrambytes( name payer, name receiver, uint32_t bytes ) {
+      const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
+      const uint64_t token_precision = token_supply.symbol.precision();
+      const uint64_t bytes_per_token = uint64_t((_gstate.max_ram_size / (double)token_supply.amount) * pow(10,token_precision));
+
+      auto eosout = int64_t((bytes * pow(10,token_precision)) / bytes_per_token);
+
+      buyram( payer, receiver, asset(eosout, core_symbol()) );
+   }
+
+
+  void system_contract::buyram( name payer, name receiver, asset quant ) {
+      require_auth( payer );
+
+      account_info_table accounts_tbl(_self, _self.value);
+      auto itr = accounts_tbl.find(payer.value);
+      bool can_create = itr == accounts_tbl.end() ? false : itr->kyc;
+
+      check( payer == "worbli.admin"_n || payer == _self || can_create,
+             "account not authorized to buy RAM" );
+      check( quant.symbol == core_symbol(), "must buy ram with core token" );
+      check( quant.amount > 0, "must purchase a positive amount" );
+
+      const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
+      const uint64_t token_precision = token_supply.symbol.precision();
+      const uint64_t bytes_per_token = uint64_t(((_gstate.max_ram_size * pow(10,token_precision)) / (double)token_supply.amount) );
+
+      uint64_t bytes_out = uint64_t(bytes_per_token * quant.amount / pow(10,token_precision));
+
+      _gstate.total_ram_bytes_reserved += uint64_t(bytes_out);
+      _gstate.total_ram_stake          += quant.amount;
+
+        user_resources_table  userres( _self, receiver.value );
+        auto res_itr = userres.find( receiver.value );
+
+        if( res_itr ==  userres.end() ) {
+            res_itr = userres.emplace( receiver, [&]( auto& res ) {
+                  res.owner = receiver;
+                  res.net_weight = asset( 0, core_symbol() );
+                  res.cpu_weight = asset( 0, core_symbol() );
+                  res.ram_bytes = bytes_out;
+                  res.ram_stake = quant;
+                  });
+        } else {
+            userres.modify( res_itr, receiver, [&]( auto& res ) {
+                  res.ram_bytes += bytes_out;
+                  res.ram_stake += quant;
+                  });
+        }
+
+        auto voter_itr = _voters.find( res_itr->owner.value );
+        if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+           int64_t ram_bytes, net, cpu;
+           get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+           set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+        }
+
+      // create refund or update from existing refund
+      if ( "eosio.stake"_n != receiver ) { //for eosio both transfer and refund make no sense
+         refunds_table refunds_tbl( _self, receiver.value );
+         auto req = refunds_tbl.find( receiver.value );
+
+         //create/update/delete refund
+         auto ram_balance = quant;
+         bool need_deferred_trx = false;
+
+         if ( req != refunds_tbl.end() ) { //need to update refund
+            refunds_tbl.modify( req, same_payer, [&]( refund_request& r ) {
+                r.request_time = current_time_point();
+                r.ram_amount -= ram_balance;
+                r.ram_bytes -= bytes_out;
+                if ( r.ram_amount.amount < 0 ) {
+                   ram_balance = -r.ram_amount;
+                   r.ram_amount.amount = 0;
+                   r.ram_bytes = 0;
+                } else {
+                   ram_balance.amount = 0;
+                }
+             });
+
+             check( 0 <= req->ram_amount.amount, "negative ram refund amount" ); //should never happen
+
+             if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 && req->ram_bytes == 0 &&
+                req->ram_amount.amount == 0 ) {
+                refunds_tbl.erase( req );
+                need_deferred_trx = false;
+             } else {
+                need_deferred_trx = true;
+             }
+         }
+
+         if ( need_deferred_trx ) {
+            eosio::transaction out;
+            out.actions.emplace_back( permission_level{ receiver, active_permission }, _self, "refund"_n, receiver );
+            out.delay_sec = refund_delay_sec;
+            cancel_deferred( receiver.value ); // TODO: Remove this line when replacing deferred trxs is fixed
+            out.send( receiver.value, receiver, true );
+         } else {
+            cancel_deferred( receiver.value );
+         }
+
+         auto transfer_amount = ram_balance;
+         if ( 0 < transfer_amount.amount ) {
+            INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, {payer, active_permission},
+               { payer, stake_account, asset(transfer_amount), std::string("stake ram") } );
+         }
+      }
+  }
+
+  /**
+    *  The system contract now buys and sells RAM allocations at prevailing market prices.
+    *  This may result in traders buying RAM today in anticipation of potential shortages
+    *  tomorrow. Overall this will result in the market balancing the supply and demand
+    *  for RAM over time.
+    */
+   void system_contract::sellram( name account, int64_t bytes ) {
+      require_auth( account );
+      check( bytes > 0, "cannot sell negative byte" );
+      int64_t delegated_ram_bytes = 0;
+
+      // lookup delegated from worbli.admin
+      del_ram_table  delram_admin( _self, "worbli.admin"_n.value );
+      auto ram_itr = delram_admin.find( account.value );
+
+      if(ram_itr != delram_admin.end())
+            delegated_ram_bytes += ram_itr->ram_bytes;
+
+      // lookup delegated from eosio
+      del_ram_table  delram_eosio( _self, _self.value );
+      ram_itr = delram_eosio.find( account.value );
+
+      if(ram_itr != delram_eosio.end())
+            delegated_ram_bytes += ram_itr->ram_bytes;
+
+      user_resources_table  userres( _self, account.value );
+      auto res_itr = userres.find( account.value );
+      check( res_itr != userres.end(), "no resource row" );
+      check( res_itr->ram_bytes - delegated_ram_bytes >= bytes, "insufficient quota" );
+
+      asset tokens_out;
+      int64_t ram_bytes = res_itr->ram_bytes;
+      float_t token_per_bytes = res_itr->ram_stake.amount / (float_t)(ram_bytes);
+      int64_t tokens = token_per_bytes * bytes;
+
+      tokens_out = asset(tokens, core_symbol());
+
+      check( tokens_out.amount > 1, "token amount received from selling ram is too low" );
+
+      _gstate.total_ram_bytes_reserved -= static_cast<decltype(_gstate.total_ram_bytes_reserved)>(bytes); // bytes > 0 is asserted above
+      _gstate.total_ram_stake          -= tokens_out.amount;
+
+      //// this shouldn't happen, but just in case it does we should prevent it
+      check( _gstate.total_ram_stake >= 0, "error, attempt to unstake more tokens than previously staked" );
+
+      userres.modify( res_itr, account, [&]( auto& res ) {
+          res.ram_bytes -= bytes;
+          res.ram_stake -= tokens_out;
+      });
+
+      auto voter_itr = _voters.find( res_itr->owner.value );
+      if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+         int64_t ram_bytes, net, cpu;
+         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+
+      }
+
+            // create refund or update from existing refund
+      if ( "eosio.stake"_n != account ) { //for eosio both transfer and refund make no sense
+         refunds_table refunds_tbl( _self, account.value );
+         auto req = refunds_tbl.find( account.value );
+
+         //create/update/delete refund
+         auto ram_balance = tokens_out;
+         bool need_deferred_trx = false;
+
+            if ( req != refunds_tbl.end() ) { //need to update refund
+               refunds_tbl.modify( req, same_payer, [&]( refund_request& r ) {
+                  r.request_time = current_time_point();
+                  r.ram_amount += ram_balance;
+                  r.ram_bytes += bytes;
+               });
+
+               if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 && req->ram_bytes == 0 &&
+                  req->ram_amount.amount == 0 ) {
+                  refunds_tbl.erase( req );
+                  need_deferred_trx = false;
+               } else {
+                  need_deferred_trx = true;
+               }
+
+            } else { //need to create refund
+               refunds_tbl.emplace( account, [&]( refund_request& r ) {
+                  r.owner = account;
+                  r.ram_amount = ram_balance;
+                  r.ram_bytes = bytes;
+                  r.cpu_amount = asset( 0, core_symbol() );
+                  r.net_amount = asset( 0, core_symbol() );
+                  r.request_time = current_time_point();
+               });
+               need_deferred_trx = true;
+            } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
+
+         if ( need_deferred_trx ) {
+            eosio::transaction out;
+            out.actions.emplace_back( permission_level{ account, active_permission }, _self, "refund"_n, account );
+            out.delay_sec = refund_delay_sec;
+            cancel_deferred( account.value ); // TODO: Remove this line when replacing deferred trxs is fixed
+            out.send( account.value, account, true );
+         } else {
+            cancel_deferred( account.value );
+         }
+      }
+      // need to update voting power
    }
 
 
