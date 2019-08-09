@@ -1,21 +1,22 @@
 # eosio.contracts
 
-## Version : 1.6.0
+## Version : 1.7.0
 
-The design of the EOSIO blockchain calls for a number of smart contracts that are run at a privileged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc.  These smart contracts are referred to as the system, token, msig and wrap (formerly known as sudo) contracts.
+The design of the EOSIO blockchain calls for a number of smart contracts that are run at a privileged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc.  These smart contracts are referred to as the bios, system, msig, wrap (formerly known as sudo) and token contracts.
 
 This repository contains examples of these privileged contracts that are useful when deploying, managing, and/or using an EOSIO blockchain.  They are provided for reference purposes:
 
-   * [eosio.system](https://github.com/eosio/eosio.contracts/tree/master/eosio.system)
-   * [eosio.msig](https://github.com/eosio/eosio.contracts/tree/master/eosio.msig)
-   * [eosio.wrap](https://github.com/eosio/eosio.contracts/tree/master/eosio.wrap)
+   * [eosio.bios](./contracts/eosio.bios)
+   * [eosio.system](./contracts/eosio.system)
+   * [eosio.msig](./contracts/eosio.msig)
+   * [eosio.wrap](./contracts/eosio.wrap)
 
 The following unprivileged contract(s) are also part of the system.
-   * [eosio.token](https://github.com/eosio/eosio.contracts/tree/master/eosio.token)
+   * [eosio.token](./contracts/eosio.token)
 
 Dependencies:
-* [eosio v1.7.x](https://github.com/EOSIO/eos/releases/tag/v1.7.0)
-* [eosio.cdt v1.5.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.5.0)
+* [eosio v1.8.x](https://github.com/EOSIO/eos/releases/tag/v1.8.0)
+* [eosio.cdt v1.6.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.6.1)
 
 To build the contracts and the unit tests:
 * First, ensure that your __eosio__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
@@ -36,6 +37,8 @@ After build:
 ## License
 
 [MIT](./LICENSE)
+
+The included icons are provided under the same terms as the software and accompanying documentation, the MIT License.  We welcome contributions from the artistically-inclined members of the community, and if you do send us alternative icons, then you are providing them under those same terms.
 
 ## Important
 

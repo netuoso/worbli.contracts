@@ -24,7 +24,7 @@ public:
       produce_blocks( 2 );
 
       create_accounts({ N(worbli.admin), N(eosio.token), N(eosio.stake), N(eosio.usage),
-                        N(eosio.saving), N(eosio.ppay)});
+                        N(eosio.saving), N(eosio.ppay), N(eosio.rex)});
 
       produce_blocks( 100 );
       set_code( N(eosio.token), contracts::token_wasm());
@@ -40,7 +40,8 @@ public:
    void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
       FC_ASSERT( core_symbol.precision() != 4, "create_core_token assumes precision of core token is 4" );
       create( config::system_account_name, asset::from_string("10000000000.0000 " + core_symbol.name()));
-      issue(config::system_account_name, N(worbli.admin), asset(10000000000000, core_symbol), "" );
+      issue(config::system_account_name, config::system_account_name, asset(10000000000000, core_symbol), "" );
+      transfer(config::system_account_name, N(worbli.admin), asset(10000000000000, symbol(4,"TST")), "");
       BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "worbli.admin", core_symbol ) );
    }
 
@@ -54,7 +55,6 @@ public:
                                                ("core", sym_str)
          );
       }
-
       {
          const auto& accnt = control->db().get<account_object,by_name>( config::system_account_name );
          abi_def abi;
@@ -385,7 +385,6 @@ BOOST_FIXTURE_TEST_CASE( delegate_ram_tests, worbli_system_tester ) try {
       //deploy_contract();
       issue(config::system_account_name, N(eosio), asset(10000000000000, symbol(4,"TST")), "" );
       create_free_account_with_resources(N(test1), N(worbli.admin));
-
       BOOST_REQUIRE_EQUAL( core_sym::from_string("20.0000"), get_balance("eosio.stake"));
       BOOST_REQUIRE_EQUAL( core_sym::from_string("999999980.0000"), get_balance("worbli.admin"));
 
@@ -439,6 +438,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_ram_tests, worbli_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+/**
 // can remove after new contract is deployed
 BOOST_FIXTURE_TEST_CASE( update_system_contract, worbli_system_tester ) try {
       worbli_system_tester t(worbli_system_tester::setup_level::deploy_legacy_contract);
@@ -565,6 +565,7 @@ BOOST_FIXTURE_TEST_CASE( update_inflation_producer_pay, worbli_system_tester ) t
 
 } FC_LOG_AND_RETHROW()
 
+// Used to test the listproducer fix.  This can be removed now.
 BOOST_FIXTURE_TEST_CASE( test_fix_list_producers, worbli_system_tester ) try {
       worbli_system_tester t(worbli_system_tester::setup_level::deploy_legacy_contract);
       vector<account_name> producers = {N(prod1), N(prod2), N(prod3), N(prod4),
@@ -613,6 +614,7 @@ BOOST_FIXTURE_TEST_CASE( test_fix_list_producers, worbli_system_tester ) try {
       BOOST_REQUIRE_EQUAL( "prod1", producer_keys[0].producer_name);
 
 } FC_LOG_AND_RETHROW()
+**/
 
 BOOST_FIXTURE_TEST_CASE( test_account_info, worbli_system_tester ) try {
    create_account_with_resources(N(parent1), N(worbli.admin));

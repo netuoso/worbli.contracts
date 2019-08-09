@@ -3,6 +3,7 @@
 namespace eosiosystem {
 
    using eosio::time_point;
+   using eosio::name;
 
       /**
     *  Every user 'from' has a scope/table that uses every receipient 'to' as the primary key.

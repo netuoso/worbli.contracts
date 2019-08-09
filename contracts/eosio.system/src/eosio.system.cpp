@@ -1,33 +1,33 @@
 #include <eosio.system/eosio.system.hpp>
-#include <eosiolib/dispatcher.hpp>
-#include <eosiolib/crypto.h>
+#include <eosio.token/eosio.token.hpp>
 
-#include "producer_pay.cpp"
-#include "delegate_bandwidth.cpp"
-#include "voting.cpp"
-#include "exchange_state.cpp"
-#include "rex.cpp"
+#include <eosio/crypto.hpp>
+#include <eosio/dispatcher.hpp>
+
 #include "worbli.cpp"
 #include "cleanup.cpp"
 
 namespace eosiosystem {
 
+   using eosio::current_time_point;
+   using eosio::token;
+
    system_contract::system_contract( name s, name code, datastream<const char*> ds )
    :native(s,code,ds),
-    _voters(_self, _self.value),
-    _producers(_self, _self.value),
-    //_producers2(_self, _self.value),
-    _global(_self, _self.value),
-    //_global2(_self, _self.value),
-    //_global3(_self, _self.value),
-    _rammarket(_self, _self.value),
-    _rexpool(_self, _self.value),
-    _rexfunds(_self, _self.value),
-    _rexbalance(_self, _self.value),
-    _rexorders(_self, _self.value),
-    _producer_pay(_self, _self.value),
-    _worbliparams(_self, _self.value),
-    _account_info(_self, _self.value)
+    _voters(get_self(), get_self().value),
+    _producers(get_self(), get_self().value),
+    //_producers2(get_self(), get_self().value),
+    _global(get_self(), get_self().value),
+    //_global2(get_self(), get_self().value),
+    //_global3(get_self(), get_self().value),
+    _rammarket(get_self(), get_self().value),
+    _rexpool(get_self(), get_self().value),
+    _rexfunds(get_self(), get_self().value),
+    _rexbalance(get_self(), get_self().value),
+    _rexorders(get_self(), get_self().value),
+    _producer_pay(get_self(), get_self().value),
+    _worbliparams(get_self(), get_self().value),
+    _account_info(get_self(), get_self().value)
    {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
@@ -42,35 +42,20 @@ namespace eosiosystem {
       return dp;
    }
 
-   time_point system_contract::current_time_point() {
-      const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
-      return ct;
-   }
-
-   time_point_sec system_contract::current_time_point_sec() {
-      const static time_point_sec cts{ current_time_point() };
-      return cts;
-   }
-
-   block_timestamp system_contract::current_block_time() {
-      const static block_timestamp cbt{ current_time_point() };
-      return cbt;
-   }
-
    symbol system_contract::core_symbol()const {
       const static auto sym = get_core_symbol( _rammarket );
       return sym;
    }
 
    system_contract::~system_contract() {
-      _global.set( _gstate, _self );
-      //_global2.set( _gstate2, _self );
-      //_global3.set( _gstate3, _self );
-      _worbliparams.set( _wstate, _self );
+      _global.set( _gstate, get_self() );
+      //_global2.set( _gstate2, get_self() );
+      //_global3.set( _gstate3, get_self() );
+      _worbliparams.set( _wstate, get_self() );
    }
 
    void system_contract::setram( uint64_t max_ram_size ) {
-      require_auth( _self );
+      require_auth( get_self() );
 
       check( _gstate.max_ram_size < max_ram_size, "ram may only be increased" ); /// decreasing ram might result market maker issues
       check( max_ram_size < 1024ll*1024*1024*1024*1024, "ram size is unrealistic" );
@@ -90,7 +75,7 @@ namespace eosiosystem {
    }
 /**
    void system_contract::update_ram_supply() {
-      auto cbt = current_block_time();
+      auto cbt = eosio::current_block_time();
 
       if( cbt <= _gstate2.last_ram_increase ) return;
 
@@ -107,15 +92,8 @@ namespace eosiosystem {
       _gstate2.last_ram_increase = cbt;
    }
 
-   **
-    *  Sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to
-    *  a maximum rate of 3 TB per year.
-    *
-    *  If update_ram_supply hasn't been called for the most recent block, then new ram will
-    *  be allocated at the old rate up to the present block before switching the rate.
-    *
    void system_contract::setramrate( uint16_t bytes_per_block ) {
-      require_auth( _self );
+      require_auth( get_self() );
 
       update_ram_supply();
       _gstate2.new_ram_per_block = bytes_per_block;
@@ -123,21 +101,21 @@ namespace eosiosystem {
 **/
 
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {
-      require_auth( _self );
+      require_auth( get_self() );
       (eosio::blockchain_parameters&)(_gstate) = params;
       check( 3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3" );
       set_blockchain_parameters( params );
    }
 
-   void system_contract::setpriv( name account, uint8_t ispriv ) {
-      require_auth( _self );
-      set_privileged( account.value, ispriv );
+   void system_contract::setpriv( const name& account, uint8_t ispriv ) {
+      require_auth( get_self() );
+      set_privileged( account, ispriv );
    }
 
-   void system_contract::setalimits( name account, int64_t ram, int64_t net, int64_t cpu ) {
-      require_auth( _self );
+   void system_contract::setalimits( const name& account, int64_t ram, int64_t net, int64_t cpu ) {
+      require_auth( get_self() );
 
-      user_resources_table userres( _self, account.value );
+      user_resources_table userres( get_self(), account.value );
       auto ritr = userres.find( account.value );
       check( ritr == userres.end(), "only supports unlimited accounts" );
 
@@ -149,14 +127,14 @@ namespace eosiosystem {
          check( !(ram_managed || net_managed || cpu_managed), "cannot use setalimits on an account with managed resources" );
       }
 
-      set_resource_limits( account.value, ram, net, cpu );
+      set_resource_limits( account, ram, net, cpu );
    }
 
-   void system_contract::setacctram( name account, std::optional<int64_t> ram_bytes ) {
-      require_auth( _self );
+   void system_contract::setacctram( const name& account, const std::optional<int64_t>& ram_bytes ) {
+      require_auth( get_self() );
 
       int64_t current_ram, current_net, current_cpu;
-      get_resource_limits( account.value, &current_ram, &current_net, &current_cpu );
+      get_resource_limits( account, current_ram, current_net, current_cpu );
 
       int64_t ram = 0;
 
@@ -165,7 +143,7 @@ namespace eosiosystem {
          check( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::ram_managed ),
                 "RAM of account is already unmanaged" );
 
-         user_resources_table userres( _self, account.value );
+         user_resources_table userres( get_self(), account.value );
          auto ritr = userres.find( account.value );
 
          ram = ram_gift_bytes;
@@ -194,14 +172,14 @@ namespace eosiosystem {
          ram = *ram_bytes;
       }
 
-      set_resource_limits( account.value, ram, current_net, current_cpu );
+      set_resource_limits( account, ram, current_net, current_cpu );
    }
 
-   void system_contract::setacctnet( name account, std::optional<int64_t> net_weight ) {
-      require_auth( _self );
+   void system_contract::setacctnet( const name& account, const std::optional<int64_t>& net_weight ) {
+      require_auth( get_self() );
 
       int64_t current_ram, current_net, current_cpu;
-      get_resource_limits( account.value, &current_ram, &current_net, &current_cpu );
+      get_resource_limits( account, current_ram, current_net, current_cpu );
 
       int64_t net = 0;
 
@@ -210,7 +188,7 @@ namespace eosiosystem {
          check( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::net_managed ),
                 "Network bandwidth of account is already unmanaged" );
 
-         user_resources_table userres( _self, account.value );
+         user_resources_table userres( get_self(), account.value );
          auto ritr = userres.find( account.value );
 
          if( ritr != userres.end() ) {
@@ -238,14 +216,14 @@ namespace eosiosystem {
          net = *net_weight;
       }
 
-      set_resource_limits( account.value, current_ram, net, current_cpu );
+      set_resource_limits( account, current_ram, net, current_cpu );
    }
 
-   void system_contract::setacctcpu( name account, std::optional<int64_t> cpu_weight ) {
-      require_auth( _self );
+   void system_contract::setacctcpu( const name& account, const std::optional<int64_t>& cpu_weight ) {
+      require_auth( get_self() );
 
       int64_t current_ram, current_net, current_cpu;
-      get_resource_limits( account.value, &current_ram, &current_net, &current_cpu );
+      get_resource_limits( account, current_ram, current_net, current_cpu );
 
       int64_t cpu = 0;
 
@@ -254,7 +232,7 @@ namespace eosiosystem {
          check( vitr != _voters.end() && has_field( vitr->flags1, voter_info::flags1_fields::cpu_managed ),
                 "CPU bandwidth of account is already unmanaged" );
 
-         user_resources_table userres( _self, account.value );
+         user_resources_table userres( get_self(), account.value );
          auto ritr = userres.find( account.value );
 
          if( ritr != userres.end() ) {
@@ -282,10 +260,15 @@ namespace eosiosystem {
          cpu = *cpu_weight;
       }
 
-      set_resource_limits( account.value, current_ram, current_net, cpu );
+      set_resource_limits( account, current_ram, current_net, cpu );
    }
 
-   void system_contract::rmvproducer( name producer ) {
+   void system_contract::activate( const eosio::checksum256& feature_digest ) {
+      require_auth( get_self() );
+      preactivate_feature( feature_digest );
+   }
+
+   void system_contract::rmvproducer( const name& producer ) {
       require_auth( "worbli.admin"_n );
       auto prod = _producers.find( producer.value );
       check( prod != _producers.end(), "producer not found" );
@@ -293,7 +276,7 @@ namespace eosiosystem {
    }
 /**
    void system_contract::updtrevision( uint8_t revision ) {
-      require_auth( _self );
+      require_auth( get_self() );
       check( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
       check( revision == _gstate2.revision + 1, "can only increment revision by one" );
       check( revision <= 1, // set upper bound to greatest revision supported in the code
@@ -301,81 +284,8 @@ namespace eosiosystem {
       _gstate2.revision = revision;
    }
 
-   void system_contract::bidname( name bidder, name newname, asset bid ) {
-      require_auth( bidder );
-      check( newname.suffix() == newname, "you can only bid on top-level suffix" );
 
-      check( (bool)newname, "the empty name is not a valid account name to bid on" );
-      check( (newname.value & 0xFull) == 0, "13 character names are not valid account names to bid on" );
-      check( (newname.value & 0x1F0ull) == 0, "accounts with 12 character names and no dots can be created without bidding required" );
-      check( !is_account( newname ), "account already exists" );
-      check( bid.symbol == core_symbol(), "asset must be system token" );
-      check( bid.amount > 0, "insufficient bid" );
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {bidder, active_permission} },
-         { bidder, names_account, bid, std::string("bid name ")+ newname.to_string() }
-      );
-
-      name_bid_table bids(_self, _self.value);
-      print( name{bidder}, " bid ", bid, " on ", name{newname}, "\n" );
-      auto current = bids.find( newname.value );
-      if( current == bids.end() ) {
-         bids.emplace( bidder, [&]( auto& b ) {
-            b.newname = newname;
-            b.high_bidder = bidder;
-            b.high_bid = bid.amount;
-            b.last_bid_time = current_time_point();
-         });
-      } else {
-         check( current->high_bid > 0, "this auction has already closed" );
-         check( bid.amount - current->high_bid > (current->high_bid / 10), "must increase bid by 10%" );
-         check( current->high_bidder != bidder, "account is already highest bidder" );
-
-         bid_refund_table refunds_table(_self, newname.value);
-
-         auto it = refunds_table.find( current->high_bidder.value );
-         if ( it != refunds_table.end() ) {
-            refunds_table.modify( it, same_payer, [&](auto& r) {
-                  r.amount += asset( current->high_bid, core_symbol() );
-               });
-         } else {
-            refunds_table.emplace( bidder, [&](auto& r) {
-                  r.bidder = current->high_bidder;
-                  r.amount = asset( current->high_bid, core_symbol() );
-               });
-         }
-
-         transaction t;
-         t.actions.emplace_back( permission_level{_self, active_permission},
-                                 _self, "bidrefund"_n,
-                                 std::make_tuple( current->high_bidder, newname )
-         );
-         t.delay_sec = 0;
-         uint128_t deferred_id = (uint128_t(newname.value) << 64) | current->high_bidder.value;
-         cancel_deferred( deferred_id );
-         t.send( deferred_id, bidder );
-
-         bids.modify( current, bidder, [&]( auto& b ) {
-            b.high_bidder = bidder;
-            b.high_bid = bid.amount;
-            b.last_bid_time = current_time_point();
-         });
-      }
-   }
-
-   void system_contract::bidrefund( name bidder, name newname ) {
-      bid_refund_table refunds_table(_self, newname.value);
-      auto it = refunds_table.find( bidder.value );
-      check( it != refunds_table.end(), "refund not found" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {names_account, active_permission}, {bidder, active_permission} },
-         { names_account, bidder, asset(it->amount), std::string("refund bid on name ")+(name{newname}).to_string() }
-      );
-      refunds_table.erase( it );
-   }
-**/
-   /**
+   **
     *  Called after a new account is created. This code enforces resource-limits rules
     *  for new accounts as well as new account naming conventions.
     *
@@ -383,9 +293,9 @@ namespace eosiosystem {
     *  This allows users who buy a premium name (shorter than 12 characters with no dots) to be the only ones
     *  who can create accounts with the creator's name as a suffix.
     *
-    */
-   void native::newaccount( name              creator,
-                            name              newact,
+**/
+   void native::newaccount( const name&       creator,
+                            const name&       newact,
                             ignore<authority> owner,
                             ignore<authority> active ) {
 
@@ -393,7 +303,7 @@ namespace eosiosystem {
       can_create_subaccount(creator);
       uint8_t kyc = 1;
 
-      if( creator != "worbli.admin"_n && creator != _self) {
+      if( creator != "worbli.admin"_n && creator != get_self() ) {
          kyc = 0;
          uint64_t tmp = newact.value >> 4;
          bool has_dot = false;
@@ -411,9 +321,8 @@ namespace eosiosystem {
       }
 
       // TODO: look into making this an inline action
-      // TODO: need to refactor, organization of the worbli code sucks
       create_account_records(newact, creator, kyc, -1);
-      user_resources_table  userres( _self, newact.value);
+      user_resources_table  userres(  get_self(), newact.value);
 
       userres.emplace( newact, [&]( auto& res ) {
         res.owner = newact;
@@ -422,26 +331,26 @@ namespace eosiosystem {
         res.ram_stake  = asset( 0, system_contract::get_core_symbol() );
       });
 
-      set_resource_limits( newact.value, 0, 0, 0 );
+      set_resource_limits( newact, 0, 0, 0 );
    }
 
-   void native::setabi( name acnt, const std::vector<char>& abi ) {
-      eosio::multi_index< "abihash"_n, abi_hash >  table(_self, _self.value);
+   void native::setabi( const name& acnt, const std::vector<char>& abi ) {
+      eosio::multi_index< "abihash"_n, abi_hash >  table(get_self(), get_self().value);
       auto itr = table.find( acnt.value );
       if( itr == table.end() ) {
          table.emplace( acnt, [&]( auto& row ) {
-            row.owner= acnt;
-            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+            row.owner = acnt;
+            row.hash = eosio::sha256(const_cast<char*>(abi.data()), abi.size());
          });
       } else {
          table.modify( itr, same_payer, [&]( auto& row ) {
-            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+            row.hash = eosio::sha256(const_cast<char*>(abi.data()), abi.size());
          });
       }
    }
 
-   void system_contract::init( unsigned_int version, symbol core ) {
-      require_auth( _self );
+   void system_contract::init( unsigned_int version, const symbol& core ) {
+      require_auth( get_self() );
       check( version.value == 0, "unsupported version for init action" );
 
       auto itr = _rammarket.find(ramcore_symbol.raw());
@@ -451,7 +360,7 @@ namespace eosiosystem {
       check( system_token_supply.symbol == core, "specified core symbol does not exist (precision mismatch)" );
 
       check( system_token_supply.amount > 0, "system token supply must be greater than 0" );
-      _rammarket.emplace( _self, [&]( auto& m ) {
+      _rammarket.emplace( get_self(), [&]( auto& m ) {
          m.supply.amount = 100000000000000ll;
          m.supply.symbol = ramcore_symbol;
          m.base.balance.amount = int64_t(_gstate.free_ram());
@@ -460,31 +369,8 @@ namespace eosiosystem {
          m.quote.balance.symbol = core;
       });
 
-      INLINE_ACTION_SENDER(eosio::token, open)( token_account, { _self, active_permission },
-                                                { rex_account, core, _self } );
+      token::open_action open_act{ token_account, { {get_self(), active_permission} } };
+      open_act.send( rex_account, core, get_self() );
    }
 
 } /// eosio.system
-
-
-EOSIO_DISPATCH( eosiosystem::system_contract,
-     // native.hpp (newaccount definition is actually in eosio.system.cpp)
-     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
-     // eosio.system.cpp
-     (init)(setram)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)
-     (rmvproducer)
-     // rex.cpp
-     (deposit)(withdraw)(buyrex)(unstaketorex)(sellrex)(cnclrexorder)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)
-     (defcpuloan)(defnetloan)(updaterex)(consolidate)(mvtosavings)(mvfrsavings)(setrex)(rexexec)(closerex)
-     // delegate_bandwidth.cpp
-     (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
-     // voting.cpp
-     (regproducer)(addproducer)(unregprod)(togglesched)
-     // producer_pay.cpp
-     (onblock)(claimrewards)
-     // worbli.cpp
-     (addacctinfo)(updacctinfo)(updparent)(setwparams)(delegateram)(setusagelvl)
-     // cleanup.cpp
-     (migrate)
-)
-

@@ -5,6 +5,5 @@ double update_producer_votepay_share( const producers_table2::const_iterator& pr
 
 Example of passing table to function!!!!
 
-### do we need this test?
-### numbers not adding up
-update_rex_vote
+look at ram_gift
+  - need it for subaccounts

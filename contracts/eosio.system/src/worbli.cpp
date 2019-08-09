@@ -1,3 +1,5 @@
+#include <cmath>
+
 namespace eosiosystem {
 
    void system_contract::delegateram( name from, name receiver,
@@ -56,7 +58,7 @@ namespace eosiosystem {
          check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
          check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
-         set_resource_limits( receiver.value, tot_itr->ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+         set_resource_limits( receiver, tot_itr->ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
 
          if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 && 
               tot_itr->ram_stake.amount == 0 ) {
@@ -124,7 +126,7 @@ namespace eosiosystem {
                                      int64_t max_subaccounts) {
         require_auth("worbli.admin"_n);    
         auto itr = _account_info.find(account.value);
-        eosio_assert( itr != _account_info.end(), "account_info record not found" );
+        check( itr != _account_info.end(), "account_info record not found" );
 
         _account_info.modify( *itr, same_payer, [&]( auto& item ) {
             item.kyc = kyc;
@@ -137,14 +139,14 @@ namespace eosiosystem {
         require_auth("worbli.admin"_n);
 
         auto act_itr = _account_info.find(account.value);
-        eosio_assert( act_itr != _account_info.end(), "account_info record not found" );
+        check( act_itr != _account_info.end(), "account_info record not found" );
         _account_info.modify( *act_itr, new_parent, [&]( auto& item ) {
             item.parent = new_parent;
         });
 
         subaccount_table subaccounts_old(_self, parent.value);
         auto sub_itr = subaccounts_old.find(account.value);
-        eosio_assert( sub_itr != subaccounts_old.end(), "subaccount record not found" );
+        check( sub_itr != subaccounts_old.end(), "subaccount record not found" );
         subaccounts_old.erase(sub_itr);
 
         subaccount_table subaccounts_new(_self, new_parent.value);
@@ -166,7 +168,7 @@ namespace eosiosystem {
         account_info_table accountinfo(_self, _self.value);
         auto itr = accountinfo.find(creator.value);
 
-        eosio_assert( itr->kyc > 0, "not permitted to create subaccounts" );
+        check( itr->kyc > 0, "not permitted to create subaccounts" );
 
         worbli_params_singleton worbliparams(_self, _self.value);
         worbli_params wstate = worbliparams.exists() ? worbliparams.get() : worbli_params{0};
@@ -176,7 +178,7 @@ namespace eosiosystem {
 
         // if accountinfo.max_subaccount < 0 use wstate.max_subaccount
         int64_t max_subaccounts = itr->max_subaccounts < 0 ? wstate.max_subaccounts : itr->max_subaccounts;
-        eosio_assert( max_subaccounts > sub_count, "subaccount limit reached" );
+        check( max_subaccounts > sub_count, "subaccount limit reached" );
 
     }
 
@@ -186,7 +188,7 @@ namespace eosiosystem {
         account_info_table accountinfo(_self, _self.value);
         auto act_itr = accountinfo.find(account.value);
 
-        eosio_assert( act_itr == accountinfo.end(), "account_info record exists, please call updacctinfo" );
+        check( act_itr == accountinfo.end(), "account_info record exists, please call updacctinfo" );
 
         subaccount_table subaccounts(_self, parent.value);
 
