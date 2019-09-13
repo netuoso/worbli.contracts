@@ -21,7 +21,6 @@ namespace eosiosystem {
             _account_info.emplace(_self, [&]( auto& item ) {
                 item.account = info.account;
                 item.parent = info.parent;
-                item.kyc = info.kyc;
                 item.max_subaccounts = -1;
             });
 
@@ -39,7 +38,6 @@ namespace eosiosystem {
                 _account_info.emplace(_self, [&]( auto& item ) {
                     item.account = sub;
                     item.parent = info.account;
-                    item.kyc = kyc;
                     item.max_subaccounts = -1;
                 });
 

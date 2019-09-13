@@ -306,8 +306,7 @@ namespace eosiosystem {
 
          // worbli.cpp
          void can_create_subaccount(name creator);
-         void create_account_records(name account, name parent, int8_t kyc,
-                                     int64_t max_subaccounts);
+         void create_account_records(name account, name parent, int64_t max_subaccounts);
    };
    /** @}*/ // @addtogroup eosiosystem
 }

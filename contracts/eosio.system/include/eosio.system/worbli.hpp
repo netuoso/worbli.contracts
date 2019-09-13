@@ -42,13 +42,12 @@ namespace eosiosystem {
    struct [[eosio::table, eosio::contract("eosio.system")]] account_info {
       name                  account;
       name                  parent;
-      uint8_t               kyc = 0;
       int64_t               max_subaccounts = -1;
       
       uint64_t primary_key()const { return account.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( account_info, (account)(parent)(kyc)(max_subaccounts) )
+      EOSLIB_SERIALIZE( account_info, (account)(parent)(max_subaccounts) )
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] subaccount {

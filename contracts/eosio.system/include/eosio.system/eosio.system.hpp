@@ -1257,10 +1257,10 @@ namespace eosiosystem {
          void togglesched( bool is_active );
 
          [[eosio::action]]
-         void addacctinfo(name account, name parent, int8_t kyc, int64_t max_subaccounts);
+         void addacctinfo(name account, name parent, int64_t max_subaccounts);
 
          [[eosio::action]]
-         void updacctinfo(name account, uint8_t kyc, int64_t max_subaccounts);
+         void updacctinfo(name account, int64_t max_subaccounts);
 
          [[eosio::action]]
          void updparent(name account, name parent, name new_parent);

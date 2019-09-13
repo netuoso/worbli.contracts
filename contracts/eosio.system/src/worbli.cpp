@@ -1,3 +1,4 @@
+#include <eosio.system/worbli.reg.common.hpp>
 #include <cmath>
 
 namespace eosiosystem {
@@ -116,20 +117,17 @@ namespace eosiosystem {
       _global.set( _gstate, _self );
    }
 
-    void system_contract::addacctinfo(name account, name parent, int8_t kyc,
-                                     int64_t max_subaccounts) {
+    void system_contract::addacctinfo(name account, name parent, int64_t max_subaccounts) {
         require_auth("worbli.admin"_n);    
-        create_account_records(account, parent, kyc, max_subaccounts);
+        create_account_records(account, parent,max_subaccounts);
     }
 
-    void system_contract::updacctinfo(name account, uint8_t kyc, 
-                                     int64_t max_subaccounts) {
+    void system_contract::updacctinfo(name account, int64_t max_subaccounts) {
         require_auth("worbli.admin"_n);    
         auto itr = _account_info.find(account.value);
         check( itr != _account_info.end(), "account_info record not found" );
 
         _account_info.modify( *itr, same_payer, [&]( auto& item ) {
-            item.kyc = kyc;
             item.max_subaccounts = max_subaccounts;
         });
     }
@@ -165,10 +163,20 @@ namespace eosiosystem {
 
         if(creator == "worbli.admin"_n || creator == _self) return;
 
+        // no validation if worbli.prov account does not exist.
+        if(!is_account(name("worbli.prov"))) return;
+
+         // TODO: make condition name an enum
+         std::vector<worbli_compliance::condition> conditions {
+            worbli_compliance::condition{"identity"_n, {"true"}}
+         };
+
+         // TODO: make worbli.prov a constant
+         auto result = worbli_compliance::validate(name("worbli.prov"), creator, conditions);
+         check(result.empty(), creator.to_string() + " failed identity check");
+
         account_info_table accountinfo(_self, _self.value);
         auto itr = accountinfo.find(creator.value);
-
-        check( itr->kyc > 0, "not permitted to create subaccounts" );
 
         worbli_params_singleton worbliparams(_self, _self.value);
         worbli_params wstate = worbliparams.exists() ? worbliparams.get() : worbli_params{0};
@@ -182,8 +190,7 @@ namespace eosiosystem {
 
     }
 
-    void native::create_account_records(name account, name parent, int8_t kyc,
-                                int64_t max_subaccounts) {
+    void native::create_account_records(name account, name parent, int64_t max_subaccounts) {
 
         account_info_table accountinfo(_self, _self.value);
         auto act_itr = accountinfo.find(account.value);
@@ -195,7 +202,6 @@ namespace eosiosystem {
         accountinfo.emplace(parent, [&]( auto& item ) {
             item.account = account;
             item.parent = parent;
-            item.kyc = kyc;
             item.max_subaccounts = max_subaccounts;
         });
 

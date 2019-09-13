@@ -6,6 +6,7 @@
 #include <eosio/transaction.hpp>
 
 #include <eosio.system/eosio.system.hpp>
+#include <eosio.system/worbli.reg.common.hpp>
 #include <eosio.token/eosio.token.hpp>
 
 #include "name_bidding.cpp"
@@ -432,14 +433,29 @@ namespace eosiosystem {
 
 
   void system_contract::buyram( const name& payer, const name& receiver, const asset& quant ) {
+
+      using std::vector;
+      using worbli_compliance::condition;
+
       require_auth( payer );
 
       account_info_table accounts_tbl(get_self(), get_self().value);
       auto itr = accounts_tbl.find(payer.value);
-      bool can_create = itr == accounts_tbl.end() ? false : itr->kyc;
 
-      check( payer == "worbli.admin"_n || payer == get_self() || can_create,
-             "account not authorized to buy RAM" );
+      // TODO: make conidtion name an enum
+      vector<condition> conditions {
+         condition{"identity"_n, {"true"}}
+      };
+
+      // TODO: make worbli.prov a constant
+      vector<condition> result;
+      // no validation if worbli.prov account does not exist.
+      result = is_account(name("worbli.prov")) ? worbli_compliance::validate(name("worbli.prov"), payer, conditions) : result;
+
+      bool can_buy = result.empty();
+
+      check( payer == "worbli.admin"_n || payer == get_self() || can_buy,
+             "RAM purchase denied. " + payer.to_string() + " failed identity check" );
       check( quant.symbol == core_symbol(), "must buy ram with core token" );
       check( quant.amount > 0, "must purchase a positive amount" );
 

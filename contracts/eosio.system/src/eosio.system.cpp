@@ -301,10 +301,8 @@ namespace eosiosystem {
 
       require_auth( creator );
       can_create_subaccount(creator);
-      uint8_t kyc = 1;
 
       if( creator != "worbli.admin"_n && creator != get_self() ) {
-         kyc = 0;
          uint64_t tmp = newact.value >> 4;
          bool has_dot = false;
 
@@ -321,7 +319,7 @@ namespace eosiosystem {
       }
 
       // TODO: look into making this an inline action
-      create_account_records(newact, creator, kyc, -1);
+      create_account_records(newact, creator, -1);
       user_resources_table  userres(  get_self(), newact.value);
 
       userres.emplace( newact, [&]( auto& res ) {
