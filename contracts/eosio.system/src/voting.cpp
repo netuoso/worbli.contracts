@@ -67,6 +67,7 @@ namespace eosiosystem {
 
    }
 
+   // TODO: allow worbli admin to unregprod
    void system_contract::unregprod( const name& producer ) {
       require_auth( producer );
 
