@@ -1,6 +1,8 @@
 #include <algorithm>
 
-namespace eosiosystem {
+namespace worblisystem {
+
+   using namespace eosiosystem;
 
    using eosio::time_point;
    using eosio::name;
@@ -64,5 +66,4 @@ namespace eosiosystem {
    typedef eosio::singleton< "worbliglobal"_n, worbli_params >   worbli_params_singleton;
    typedef eosio::multi_index< "accountinfo1"_n, account_info >  account_info_table;
    typedef eosio::multi_index< "subaccounts"_n, subaccount >  subaccount_table;
-
 }

@@ -26,6 +26,8 @@
 
 namespace eosiosystem {
 
+   using namespace worblisystem;
+
    using eosio::asset;
    using eosio::block_timestamp;
    using eosio::check;

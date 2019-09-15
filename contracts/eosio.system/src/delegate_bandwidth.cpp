@@ -16,6 +16,8 @@
 
 namespace eosiosystem {
 
+   using namespace worblisystem;
+
    using eosio::asset;
    using eosio::const_mem_fun;
    using eosio::current_time_point;
@@ -435,7 +437,6 @@ namespace eosiosystem {
   void system_contract::buyram( const name& payer, const name& receiver, const asset& quant ) {
 
       using std::vector;
-      using worbli_compliance::condition;
 
       require_auth( payer );
 
@@ -447,10 +448,9 @@ namespace eosiosystem {
          condition{"identity"_n, {"true"}}
       };
 
-      // TODO: make worbli.prov a constant
       vector<condition> result;
       // no validation if worbli.prov account does not exist.
-      result = is_account(name("worbli.prov")) ? worbli_compliance::validate(name("worbli.prov"), payer, conditions) : result;
+      result = is_account(provider_account) ? validate(provider_account, payer, conditions) : result;
 
       bool can_buy = result.empty();
 

@@ -164,15 +164,14 @@ namespace eosiosystem {
         if(creator == "worbli.admin"_n || creator == _self) return;
 
         // no validation if worbli.prov account does not exist.
-        if(!is_account(name("worbli.prov"))) return;
+        if(!is_account(provider_account)) return;
 
          // TODO: make condition name an enum
-         std::vector<worbli_compliance::condition> conditions {
-            worbli_compliance::condition{"identity"_n, {"true"}}
+         std::vector<worblisystem::condition> conditions {
+            worblisystem::condition{"identity"_n, {"true"}}
          };
 
-         // TODO: make worbli.prov a constant
-         auto result = worbli_compliance::validate(name("worbli.prov"), creator, conditions);
+         auto result = worblisystem::validate(provider_account, creator, conditions);
          check(result.empty(), creator.to_string() + " failed identity check");
 
         account_info_table accountinfo(_self, _self.value);
