@@ -1272,7 +1272,7 @@ namespace eosiosystem {
 
          // functions defined in cleanup.cpp
          [[eosio::action]]
-         void migrate();
+         void migrate(name account);
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;

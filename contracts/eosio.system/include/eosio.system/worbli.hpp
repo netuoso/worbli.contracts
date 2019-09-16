@@ -64,6 +64,6 @@ namespace worblisystem {
    typedef eosio::multi_index< "delram"_n, delegated_ram >        del_ram_table;
    typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
    typedef eosio::singleton< "worbliglobal"_n, worbli_params >   worbli_params_singleton;
-   typedef eosio::multi_index< "accountinfo1"_n, account_info >  account_info_table;
+   typedef eosio::multi_index< "accountinfo"_n, account_info >  account_info_table;
    typedef eosio::multi_index< "subaccounts"_n, subaccount >  subaccount_table;
 }
