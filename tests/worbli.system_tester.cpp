@@ -531,8 +531,10 @@ BOOST_FIXTURE_TEST_CASE( test_new_account, worbli_system_tester ) try {
 
    // setup WTP framework
    BOOST_REQUIRE_EQUAL( success(), add_credential( N(identity), "identity verified") );
+   BOOST_REQUIRE_EQUAL( success(), add_credential( N(maxsubacct), "max allowed subaccounts") );
    BOOST_REQUIRE_EQUAL( success(), add_provider( N(worbli.prov), "worbli foundation") );
    BOOST_REQUIRE_EQUAL( success(), add_provider_credential( N(worbli.prov), N(identity)) );
+   BOOST_REQUIRE_EQUAL( success(), add_provider_credential( N(worbli.prov), N(maxsubacct)) );
 
    create_account_with_resources(N(parent1), N(worbli.admin));
    transfer(N(worbli.admin), N(parent1), asset(50000000, symbol(4,"TST")), "");
@@ -557,22 +559,12 @@ BOOST_FIXTURE_TEST_CASE( test_new_account, worbli_system_tester ) try {
    // child not allowed to create subaccount (kyc = 0)
    transfer(N(worbli.admin), N(child1), asset(50000000, symbol(4,"TST")), "");
 
-   REQUIRE_MATCHING_OBJECT( get_accountinfo(N(child1)), mvo()
-      ("account", "child1")
-      ("parent", "parent1")
-      ("max_subaccounts", -1)
-   );
-
    BOOST_REQUIRE_EXCEPTION( create_account_with_resources(N(child1child), N(child1)),
                             eosio_assert_message_exception, eosio_assert_message_is("child1 failed identity check"));
 
    // test user specific limits
    // set parent1 specific limit = 2
-   BOOST_REQUIRE_EQUAL( success(), push_system_action( N(worbli.admin), N(updacctinfo), mvo()
-                                       ("account", "parent1")
-                                       ("max_subaccounts", 2)
-                                    )
-                     );
+   BOOST_REQUIRE_EQUAL( success(), add_entry( N(worbli.prov), N(parent1), N(maxsubacct), "2") );
    // set global limit = 1 parent 1 limit = 2.  parent 1 has one subaccount already
    // this should succeed
    create_account_with_resources(N(child2), N(parent1));

@@ -8,8 +8,6 @@ namespace eosiosystem {
       
       uint64_t primary_key()const { return account.value; }
 
-      void validate();
-
       EOSLIB_SERIALIZE( account_info_old, (account)(parent)(kyc)(max_subaccounts) )
    };
 

@@ -26,8 +26,7 @@ namespace eosiosystem {
     _rexbalance(get_self(), get_self().value),
     _rexorders(get_self(), get_self().value),
     _producer_pay(get_self(), get_self().value),
-    _worbliparams(get_self(), get_self().value),
-    _account_info(get_self(), get_self().value)
+    _worbliparams(get_self(), get_self().value)
    {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();

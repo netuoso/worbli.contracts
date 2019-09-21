@@ -6,7 +6,7 @@
 #include <eosio/transaction.hpp>
 
 #include <eosio.system/eosio.system.hpp>
-#include <eosio.system/worbli.reg.common.hpp>
+#include <eosio.system/worbli.prov.common.hpp>
 #include <eosio.token/eosio.token.hpp>
 
 #include "name_bidding.cpp"
@@ -439,9 +439,6 @@ namespace eosiosystem {
       using std::vector;
 
       require_auth( payer );
-
-      account_info_table accounts_tbl(get_self(), get_self().value);
-      auto itr = accounts_tbl.find(payer.value);
 
       // TODO: make conidtion name an enum
       vector<condition> conditions {

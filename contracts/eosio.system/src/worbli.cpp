@@ -1,4 +1,4 @@
-#include <eosio.system/worbli.reg.common.hpp>
+#include <eosio.system/worbli.prov.common.hpp>
 #include <cmath>
 
 namespace eosiosystem {
@@ -117,42 +117,6 @@ namespace eosiosystem {
       _global.set( _gstate, _self );
    }
 
-    void system_contract::addacctinfo(name account, name parent, int64_t max_subaccounts) {
-        require_auth("worbli.admin"_n);    
-        create_account_records(account, parent,max_subaccounts);
-    }
-
-    void system_contract::updacctinfo(name account, int64_t max_subaccounts) {
-        require_auth("worbli.admin"_n);    
-        auto itr = _account_info.find(account.value);
-        check( itr != _account_info.end(), "account_info record not found" );
-
-        _account_info.modify( *itr, same_payer, [&]( auto& item ) {
-            item.max_subaccounts = max_subaccounts;
-        });
-    }
-
-    // TODO: validate no other account claiming subaccount
-    void system_contract::updparent(name account, name parent, name new_parent) {
-        require_auth("worbli.admin"_n);
-
-        auto act_itr = _account_info.find(account.value);
-        check( act_itr != _account_info.end(), "account_info record not found" );
-        _account_info.modify( *act_itr, new_parent, [&]( auto& item ) {
-            item.parent = new_parent;
-        });
-
-        subaccount_table subaccounts_old(_self, parent.value);
-        auto sub_itr = subaccounts_old.find(account.value);
-        check( sub_itr != subaccounts_old.end(), "subaccount record not found" );
-        subaccounts_old.erase(sub_itr);
-
-        subaccount_table subaccounts_new(_self, new_parent.value);
-        subaccounts_new.emplace(_self, [&]( auto& item ) {
-            item.account = account;
-        });
-    }
-
     void system_contract::setwparams(uint64_t max_subaccounts) {
       require_auth( _self );
       _wstate.max_subaccounts = max_subaccounts;
@@ -167,6 +131,7 @@ namespace eosiosystem {
         if(!is_account(provider_account)) return;
 
          // TODO: make condition name an enum
+         // TODO: add optional comparator to condition >, <, = etc...
          std::vector<worblisystem::condition> conditions {
             worblisystem::condition{"identity"_n, {"true"}}
          };
@@ -174,8 +139,8 @@ namespace eosiosystem {
          auto result = worblisystem::validate(provider_account, creator, conditions);
          check(result.empty(), creator.to_string() + " failed identity check");
 
-        account_info_table accountinfo(_self, _self.value);
-        auto itr = accountinfo.find(creator.value);
+         int64_t max_subaccounts = worblisystem::getInt64(provider_account, creator, "maxsubacct"_n);
+         print(max_subaccounts);
 
         worbli_params_singleton worbliparams(_self, _self.value);
         worbli_params wstate = worbliparams.exists() ? worbliparams.get() : worbli_params{0};
@@ -184,25 +149,14 @@ namespace eosiosystem {
         auto sub_count = std::distance(subaccounts.cbegin(),subaccounts.cend());
 
         // if accountinfo.max_subaccount < 0 use wstate.max_subaccount
-        int64_t max_subaccounts = itr->max_subaccounts < 0 ? wstate.max_subaccounts : itr->max_subaccounts;
+        max_subaccounts = max_subaccounts < 0 ? wstate.max_subaccounts : max_subaccounts;
         check( max_subaccounts > sub_count, "subaccount limit reached" );
 
     }
 
     void native::create_account_records(name account, name parent, int64_t max_subaccounts) {
 
-        account_info_table accountinfo(_self, _self.value);
-        auto act_itr = accountinfo.find(account.value);
-
-        check( act_itr == accountinfo.end(), "account_info record exists, please call updacctinfo" );
-
         subaccount_table subaccounts(_self, parent.value);
-
-        accountinfo.emplace(parent, [&]( auto& item ) {
-            item.account = account;
-            item.parent = parent;
-            item.max_subaccounts = max_subaccounts;
-        });
 
         auto sub_itr = subaccounts.find(account.value);
         if(sub_itr != subaccounts.end()) return;

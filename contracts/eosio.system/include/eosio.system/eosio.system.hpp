@@ -559,7 +559,6 @@ namespace eosiosystem {
          producer_pay_table      _producer_pay;
          worbli_params_singleton _worbliparams;
          worbli_params           _wstate;
-         account_info_table      _account_info;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -1257,15 +1256,6 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void togglesched( bool is_active );
-
-         [[eosio::action]]
-         void addacctinfo(name account, name parent, int64_t max_subaccounts);
-
-         [[eosio::action]]
-         void updacctinfo(name account, int64_t max_subaccounts);
-
-         [[eosio::action]]
-         void updparent(name account, name parent, name new_parent);
 
          [[eosio::action]]
          void setwparams(uint64_t max_subaccounts);
