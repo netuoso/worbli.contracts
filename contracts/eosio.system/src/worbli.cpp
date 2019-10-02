@@ -113,7 +113,6 @@ namespace eosiosystem {
       check( new_level > 0, "usage level cannot be negative" );
 
       _gstate.network_usage_level = new_level;
-      _global.set( _gstate, _self );
    }
 
     void system_contract::addacctinfo(name account, name parent, int8_t kyc,
