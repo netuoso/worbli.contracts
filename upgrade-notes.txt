@@ -1,0 +1,16 @@
+# activate prefeature
+# deploy v1.7.0
+# deploy WTP contracts
+    - worbli.reg
+    - worbli.prov
+# update portal listener to use WTP
+# 
+# backfill accountinfo kyc to WTP
+# move accountinfo1 back to accountinfo (minus kyc)
+# backfill missing accountinfo / wtp data
+# cleanup survey contracts
+
+Tables to cleanup
+
+worbliglobal -> worbliparam
+accountinfo1 -> accountinfo (or does this go away)?

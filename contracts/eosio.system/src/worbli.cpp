@@ -159,6 +159,22 @@ namespace eosiosystem {
       _wstate.max_subaccounts = max_subaccounts;
     }
 
+    void system_contract::setfeature(name feature, bool is_active) {
+       require_auth( _self );
+       feature_table f_t(get_self(), get_self().value);
+       auto itr = f_t.find(feature.value);
+       if( itr == f_t.end() ) {
+          f_t.emplace(get_self(), [&](auto &f) {
+            f.feature = feature;
+            f.is_active = is_active;
+         });
+       } else {
+          f_t.modify( *itr, same_payer, [&]( auto& item ) {
+            item.is_active = is_active;
+        });
+       }
+    }
+
    // worbli additions
     void native::can_create_subaccount(name creator) {
 

@@ -555,9 +555,12 @@ namespace eosiosystem {
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
          producer_pay_table      _producer_pay;
-         worbli_params_singleton _worbliparams;
-         worbli_params           _wstate;
+         worbli_params_singleton _worbliparams; // deprecated
+         worbli_params           _wstate; // deprecated
+         wglobal_state_singleton _wglobal;
+         worbli_global_state     _wgstate;
          account_info_table      _account_info;
+         feature_table           _features;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -1267,6 +1270,9 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setwparams(uint64_t max_subaccounts);
+
+         [[eosio::action]]
+         void setfeature(name faeture, bool is_active);
 
          // functions defined in cleanup.cpp
          [[eosio::action]]

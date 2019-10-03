@@ -3,6 +3,7 @@
 namespace eosiosystem {
 
    using eosio::time_point;
+   using eosio::time_point_sec;
    using eosio::name;
 
       /**
@@ -39,6 +40,14 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( worbli_params, (max_subaccounts) )
    };
 
+   struct [[eosio::table("wglobal"), eosio::contract("eosio.system")]] worbli_global_state {
+      uint64_t              max_subaccounts = 1;
+      time_point_sec        last_inflation_print = time_point_sec();
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( worbli_global_state, (max_subaccounts)(last_inflation_print) )
+   };
+
+
    struct [[eosio::table, eosio::contract("eosio.system")]] account_info {
       name                  account;
       name                  parent;
@@ -60,10 +69,31 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( subaccount, (account) )
    };
 
+   struct [[eosio::table, eosio::contract("eosio.system")]] feature_toggle {
+      name                  feature;
+      bool                  is_active;
+      uint64_t primary_key()const { return feature.value; }
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( feature_toggle, (feature)(is_active) )
+   };
+
    typedef eosio::multi_index< "delram"_n, delegated_ram >        del_ram_table;
    typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
    typedef eosio::singleton< "worbliglobal"_n, worbli_params >   worbli_params_singleton;
+   typedef eosio::singleton< "wglobal"_n, worbli_global_state >   wglobal_state_singleton;
    typedef eosio::multi_index< "accountinfo1"_n, account_info >  account_info_table;
    typedef eosio::multi_index< "subaccounts"_n, subaccount >  subaccount_table;
+   typedef eosio::multi_index< "features"_n, feature_toggle >  feature_table;
+
+   // inflation table in worbli.resource contract
+   struct daily_inflation
+   {
+      uint64_t id;
+      asset amount;
+      eosio::time_point_sec timestamp;
+      uint64_t primary_key() const { return (id); }
+   };
+   typedef eosio::multi_index<"inflation"_n, daily_inflation> inflation_table;
 
 }
