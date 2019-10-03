@@ -626,7 +626,7 @@ BOOST_FIXTURE_TEST_CASE( test_account_info, worbli_system_tester ) try {
                             eosio_assert_message_exception, eosio_assert_message_is("subaccount limit reached"));
 
    // set global limit to 1 subaccount
-   BOOST_REQUIRE_EQUAL( success(), push_system_action( N(eosio), N(setwparams), mvo() ("max_subaccounts", 1)));
+   BOOST_REQUIRE_EQUAL( success(), push_system_action( N(worbli.admin), N(setwparams), mvo() ("max_subaccounts", 1)));
    create_account_with_resources(N(child1), N(parent1));
 
    // 2nd subaccount should fail
@@ -662,7 +662,7 @@ BOOST_FIXTURE_TEST_CASE( test_account_info, worbli_system_tester ) try {
                             eosio_assert_message_exception, eosio_assert_message_is("subaccount limit reached"));
 
    // set global max_subaccounts = 3
-   BOOST_REQUIRE_EQUAL( success(), push_system_action( N(eosio), N(setwparams), mvo() ("max_subaccounts", 3)));
+   BOOST_REQUIRE_EQUAL( success(), push_system_action( N(worbli.admin), N(setwparams), mvo() ("max_subaccounts", 3)));
 
    // should still fail. When account specific limit is set it supercedes global
    BOOST_REQUIRE_EXCEPTION( create_account_with_resources(N(child3), N(parent1)),

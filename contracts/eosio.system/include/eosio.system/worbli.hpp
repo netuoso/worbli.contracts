@@ -33,7 +33,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( producer_pay, (owner)(earned_pay)(last_claim_time) )
    };
 
-   struct [[eosio::table("worbliglobal"), eosio::contract("eosio.system")]] worbli_params {
+   struct [[eosio::table("wparams"), eosio::contract("eosio.system")]] worbli_params {
       uint64_t              max_subaccounts = 1;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -41,12 +41,11 @@ namespace eosiosystem {
    };
 
    struct [[eosio::table("wglobal"), eosio::contract("eosio.system")]] worbli_global_state {
-      uint64_t              max_subaccounts = 1;
       time_point_sec        last_inflation_print = time_point_sec();
+      std::string            message; // Todo: remove after testing
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( worbli_global_state, (max_subaccounts)(last_inflation_print) )
+      EOSLIB_SERIALIZE( worbli_global_state, (last_inflation_print)(message) )
    };
-
 
    struct [[eosio::table, eosio::contract("eosio.system")]] account_info {
       name                  account;
@@ -80,7 +79,7 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "delram"_n, delegated_ram >        del_ram_table;
    typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
-   typedef eosio::singleton< "worbliglobal"_n, worbli_params >   worbli_params_singleton;
+   typedef eosio::singleton< "wparams"_n, worbli_params >   worbli_params_singleton;
    typedef eosio::singleton< "wglobal"_n, worbli_global_state >   wglobal_state_singleton;
    typedef eosio::multi_index< "accountinfo1"_n, account_info >  account_info_table;
    typedef eosio::multi_index< "subaccounts"_n, subaccount >  subaccount_table;

@@ -44,10 +44,58 @@ namespace eosiosystem {
 
       auto f_itr = _features.find( "resource"_n.value );
       if ( f_itr != _features.end() && f_itr->is_active == true ) {  // new resource model
+         /**
+          * Inflation issue requests are created by an oracle via the worbli.resource contract
+          * As this is an offchain process it is possible for issue requests to be delayed for arbitrary durations
+          * We need to enforce the following rules:
+          * - last_inflation_print can only move forward in 24 hour increments
+          * - new inflation request timestamp must be in the past
+          *
+          * We only need to check for a new issue request once last_inflation_print is > 24 hours in the past
+          *
+          * TODO: consider moving this to an action to eliminate "polling" the inflation table for new issue requests
+          *
+          * */
+         if( ct.sec_since_epoch() - _wgstate.last_inflation_print.sec_since_epoch() > seconds(seconds_per_day).to_seconds() ) {
+            inflation_table i_t(resource_account, resource_account.value);
+            if( i_t.begin() == i_t.end() ) {
+               _wgstate.message = "no inflation request";
+               return;
+            }
+
+            auto itr = i_t.begin();
+
+            time_point_sec next = time_point_sec(86400 +  _wgstate.last_inflation_print.sec_since_epoch());
+
+            /**
+             * This indicates a misbehaving or malicious oracle
+             * TODO: consider pausing inflation issue until explicitly restarted
+             * */
+            if( itr->timestamp != next ) {
+               _wgstate.message = "invalid timestamp: " + std::to_string(itr->timestamp.sec_since_epoch());
+               return;
+            }
+
+            /**
+             * This indicates a misbehaving or malicious oracle
+             * TODO: consider pausing inflation issue until explicitly restarted
+             * */
+            if( next > current_time_point() ) {
+               _wgstate.message = "cannot issue inflation for future date: " + std::to_string(next.sec_since_epoch());
+               return;
+            }
+
+            {
+               token::issue_action issue_act{ token_account, { {get_self(), active_permission} } };
+               issue_act.send( get_self(), itr->amount, "issue tokens for daily inflation" );
+            }
+            {
+               token::transfer_action transfer_act{ token_account, { {get_self(), active_permission} } };
+               transfer_act.send( get_self(), resource_account, itr->amount, "daily inflation" );
+            }
          
-         if( ct - _gstate.last_inflation_distribution > microseconds(useconds_per_day) ) {
          }
-         
+
       } else { // legacy inflation model
 
          /// only distribute inflation once a day

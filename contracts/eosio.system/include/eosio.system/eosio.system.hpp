@@ -555,8 +555,8 @@ namespace eosiosystem {
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
          producer_pay_table      _producer_pay;
-         worbli_params_singleton _worbliparams; // deprecated
-         worbli_params           _wstate; // deprecated
+         worbli_params_singleton _worbli_params;
+         worbli_params           _worbli_params_state;
          wglobal_state_singleton _wglobal;
          worbli_global_state     _wgstate;
          account_info_table      _account_info;
@@ -569,6 +569,7 @@ namespace eosiosystem {
          static constexpr eosio::name stake_account{"eosio.stake"_n};
          static constexpr eosio::name ppay_account{"eosio.ppay"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
+         static constexpr eosio::name resource_account{"resource"_n};
          static constexpr eosio::name rex_account{"eosio.rex"_n};
          static constexpr eosio::name null_account{"eosio.null"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
@@ -1270,6 +1271,9 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setwparams(uint64_t max_subaccounts);
+
+         [[eosio::action]]
+         void setwgstate(time_point_sec timestamp);
 
          [[eosio::action]]
          void setfeature(name faeture, bool is_active);

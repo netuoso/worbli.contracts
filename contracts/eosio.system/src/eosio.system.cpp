@@ -26,7 +26,7 @@ namespace eosiosystem {
     _rexbalance(get_self(), get_self().value),
     _rexorders(get_self(), get_self().value),
     _producer_pay(get_self(), get_self().value),
-    _worbliparams(get_self(), get_self().value),
+    _worbli_params(get_self(), get_self().value),
     _wglobal(get_self(), get_self().value),
     _account_info(get_self(), get_self().value),
     _features(get_self(), get_self().value)
@@ -35,8 +35,8 @@ namespace eosiosystem {
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       //_gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
       //_gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
-      _wstate = _worbliparams.exists() ? _worbliparams.get() : worbli_params{0};
-      _wgstate = _wglobal.exists() ? _wglobal.get() : worbli_global_state{0};
+      _worbli_params_state = _worbli_params.exists() ? _worbli_params.get() : worbli_params{0};
+      _wgstate = _wglobal.exists() ? _wglobal.get() : worbli_global_state{};
    }
 
    eosio_global_state system_contract::get_default_parameters() {
@@ -54,7 +54,7 @@ namespace eosiosystem {
       _global.set( _gstate, get_self() );
       //_global2.set( _gstate2, get_self() );
       //_global3.set( _gstate3, get_self() );
-      _worbliparams.set( _wstate, get_self() );
+      _worbli_params.set( _worbli_params_state, get_self() );
       _wglobal.set( _wgstate, get_self() );
    }
 
