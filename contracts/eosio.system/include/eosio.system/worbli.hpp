@@ -42,9 +42,10 @@ namespace eosiosystem {
 
    struct [[eosio::table("wglobal"), eosio::contract("eosio.system")]] worbli_global_state {
       time_point_sec        last_inflation_print = time_point_sec();
+      time_point_sec        last_metric_read = time_point_sec();
       std::string            message; // Todo: remove after testing
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( worbli_global_state, (last_inflation_print)(message) )
+      EOSLIB_SERIALIZE( worbli_global_state, (last_inflation_print)(last_metric_read)(message) )
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] account_info {
@@ -77,6 +78,15 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( feature_toggle, (feature)(is_active) )
    };
 
+   struct [[eosio::table, eosio::contract("eosio.system")]] metric
+   {
+      eosio::time_point_sec timestamp;
+      asset wbi_supply;
+      asset wbi_locked;
+      uint64_t primary_key() const { return (timestamp.sec_since_epoch()); }
+   };
+   typedef eosio::multi_index<"metrics"_n, metric> metrics_table;
+
    typedef eosio::multi_index< "delram"_n, delegated_ram >        del_ram_table;
    typedef eosio::multi_index< "prodpay"_n, producer_pay >  producer_pay_table;
    typedef eosio::singleton< "wparams"_n, worbli_params >   worbli_params_singleton;
@@ -88,11 +98,22 @@ namespace eosiosystem {
    // inflation table in worbli.resource contract
    struct daily_inflation
    {
-      uint64_t id;
-      asset amount;
       eosio::time_point_sec timestamp;
-      uint64_t primary_key() const { return (id); }
+      asset amount;
+
+      uint64_t primary_key() const { return (timestamp.sec_since_epoch()); }
    };
    typedef eosio::multi_index<"inflation"_n, daily_inflation> inflation_table;
+
+   // mock leasing contract table. Replace with contract header file once available
+   struct lease_info
+   {
+      uint64_t id;
+      asset locked;
+
+      uint64_t primary_key() const { return (id); }
+   };
+   typedef eosio::multi_index<"leasing"_n, lease_info> leasing_table;
+
 
 }

@@ -1273,7 +1273,7 @@ namespace eosiosystem {
          void setwparams(uint64_t max_subaccounts);
 
          [[eosio::action]]
-         void setwgstate(time_point_sec timestamp);
+         void setwgstate(time_point_sec last_inflation_print, time_point_sec last_metric_read);
 
          [[eosio::action]]
          void setfeature(name faeture, bool is_active);
