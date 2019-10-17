@@ -7,18 +7,18 @@ namespace worblisystem
     using std::vector;
     struct [[ eosio::table, eosio::contract("worbli.prov") ]] account_attribute
     {
-        name attribute_code;
+        name name;
         string value;
-        uint64_t primary_key() const { return attribute_code.value; }
+        uint64_t primary_key() const { return name.value; }
 
-        EOSLIB_SERIALIZE(account_attribute, (attribute_code)(value))
+        EOSLIB_SERIALIZE(account_attribute, (name)(value))
     };
 
     typedef eosio::multi_index<name("registry"), account_attribute> registry;
 
     struct condition
     {
-        name credential_code;
+        name attribute;
         vector<string> values;
     };
 
@@ -29,7 +29,7 @@ namespace worblisystem
         for (condition condition : conditions)
         {
             registry registry_table(provider, account.value);
-            auto itr = registry_table.find(condition.credential_code.value);
+            auto itr = registry_table.find(condition.attribute.value);
 
             if (itr == registry_table.end() ||
                 find(condition.values.begin(), condition.values.end(), itr->value) == condition.values.end())
@@ -40,17 +40,33 @@ namespace worblisystem
         return failed;
     }
 
-    // TODO: test what happens when non numric value is stored
-    // TDOD: add type to credentials and validate addentry.
-    inline int64_t getInt64(name provider, name account, name credential_code)
-    {
-        int64_t value = -1;
-        registry registry_table(provider, account.value);
-        auto itr = registry_table.find(credential_code.value);
+/**
+    Returns an int value from a registry
 
-        if (itr == registry_table.end()) return value;
-        value = std::stoi( itr->value );
-        return value;        
+    @param provider account hosting the provider contract.
+    @param account account the attribute is associated to
+    @param attribute attribute to lookup
+    @return optional containg an int64_t.
+            nullopt if error
+            -1 if value doesn't exists
+*/
+    inline const std::optional<int64_t> getint(name provider, name account, name attribute)
+    {
+        registry registry_table(provider, account.value);
+        auto itr = registry_table.find(attribute.value);
+
+        if (itr != registry_table.end()) {
+            char *c = new char[itr->value.size() + 1];
+            std::copy(itr->value.begin(), itr->value.end(), c);
+            char* end;
+            long number = std::strtol(c, &end, 0);
+            if (*end == '\0')
+                return std::optional<int64_t>{number};
+
+            return std::nullopt;
+        }
+
+        return std::optional<int64_t>{-1};
     }
 
    static constexpr eosio::name regulator_account{"worbli.reg"_n};

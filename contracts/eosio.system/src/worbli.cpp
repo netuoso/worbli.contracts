@@ -139,8 +139,11 @@ namespace eosiosystem {
          auto result = worblisystem::validate(provider_account, creator, conditions);
          check(result.empty(), creator.to_string() + " failed identity check");
 
-         int64_t max_subaccounts = worblisystem::getInt64(provider_account, creator, "maxsubacct"_n);
-         print(max_subaccounts);
+         /**
+          * if null set max_subaccount = 0
+          **/
+         std::optional<int64_t> opt = worblisystem::getint(provider_account, creator, "maxsubacct"_n);
+         int64_t max_subaccounts = opt ? *opt : 0;
 
         worbli_params_singleton worbliparams(_self, _self.value);
         worbli_params wstate = worbliparams.exists() ? worbliparams.get() : worbli_params{0};
