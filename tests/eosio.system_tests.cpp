@@ -4832,7 +4832,7 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
       ("cpu_weight", core_sym::from_string("0.0000"))
-      ("ram_stake", core_sym::from_string("36797.5882"))
+      ("ram_stake", core_sym::from_string("36706.5147"))
       ("ram_bytes",  total_res["ram_bytes"].as_int64() )
    );
 
