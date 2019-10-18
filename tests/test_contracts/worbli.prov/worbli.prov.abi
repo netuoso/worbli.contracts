@@ -4,6 +4,20 @@
     "types": [],
     "structs": [
         {
+            "name": "account_attribute",
+            "base": "",
+            "fields": [
+                {
+                    "name": "name",
+                    "type": "name"
+                },
+                {
+                    "name": "value",
+                    "type": "string"
+                }
+            ]
+        },
+        {
             "name": "addentry",
             "base": "",
             "fields": [
@@ -12,7 +26,7 @@
                     "type": "name"
                 },
                 {
-                    "name": "credential_code",
+                    "name": "attribute",
                     "type": "name"
                 },
                 {
@@ -30,7 +44,7 @@
                     "type": "name"
                 },
                 {
-                    "name": "credential_code",
+                    "name": "attribute",
                     "type": "name"
                 }
             ]
@@ -44,7 +58,7 @@
                     "type": "name"
                 },
                 {
-                    "name": "credential_code",
+                    "name": "attribute",
                     "type": "name"
                 },
                 {
@@ -71,7 +85,15 @@
             "ricardian_contract": ""
         }
     ],
-    "tables": [],
+    "tables": [
+        {
+            "name": "registry",
+            "type": "account_attribute",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
     "ricardian_clauses": [],
     "variants": []
 }

@@ -4,21 +4,25 @@
     "types": [],
     "structs": [
         {
-            "name": "addcred",
+            "name": "addattribute",
             "base": "",
             "fields": [
                 {
-                    "name": "credential_code",
+                    "name": "attribute",
                     "type": "name"
                 },
                 {
                     "name": "description",
                     "type": "string"
+                },
+                {
+                    "name": "type",
+                    "type": "uint8"
                 }
             ]
         },
         {
-            "name": "addprovcred",
+            "name": "addprovattr",
             "base": "",
             "fields": [
                 {
@@ -26,7 +30,7 @@
                     "type": "name"
                 },
                 {
-                    "name": "credential_code",
+                    "name": "attribute",
                     "type": "name"
                 }
             ]
@@ -50,8 +54,12 @@
             "base": "",
             "fields": [
                 {
-                    "name": "attribute_code",
+                    "name": "name",
                     "type": "name"
+                },
+                {
+                    "name": "type",
+                    "type": "uint32"
                 },
                 {
                     "name": "description",
@@ -78,16 +86,20 @@
             ]
         },
         {
-            "name": "updcred",
+            "name": "updattribute",
             "base": "",
             "fields": [
                 {
-                    "name": "credential_code",
+                    "name": "attribute",
                     "type": "name"
                 },
                 {
                     "name": "description",
                     "type": "string"
+                },
+                {
+                    "name": "type",
+                    "type": "uint8"
                 }
             ]
         },
@@ -108,13 +120,13 @@
     ],
     "actions": [
         {
-            "name": "addcred",
-            "type": "addcred",
+            "name": "addattribute",
+            "type": "addattribute",
             "ricardian_contract": ""
         },
         {
-            "name": "addprovcred",
-            "type": "addprovcred",
+            "name": "addprovattr",
+            "type": "addprovattr",
             "ricardian_contract": ""
         },
         {
@@ -123,8 +135,8 @@
             "ricardian_contract": ""
         },
         {
-            "name": "updcred",
-            "type": "updcred",
+            "name": "updattribute",
+            "type": "updattribute",
             "ricardian_contract": ""
         },
         {
