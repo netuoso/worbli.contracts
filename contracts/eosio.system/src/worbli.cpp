@@ -118,7 +118,7 @@ namespace eosiosystem {
    }
 
     void system_contract::setwparams(uint64_t max_subaccounts) {
-      require_auth( _self );
+      require_auth( "worbli.admin"_n );
       _wstate.max_subaccounts = max_subaccounts;
     }
 
