@@ -14,6 +14,10 @@
                 {
                     "name": "value",
                     "type": "string"
+                },
+                {
+                    "name": "expiration",
+                    "type": "time_point_sec"
                 }
             ]
         },

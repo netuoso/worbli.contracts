@@ -193,12 +193,6 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "exchange_state", data, abi_serializer_max_time );
    }
 
-   fc::variant get_accountinfo(const account_name& act) {
-      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(accountinfo1), act );
-      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account_info", data, abi_serializer_max_time );
-   }
-
    action_result create( account_name issuer,
                 asset        maximum_supply ) {
 

@@ -440,16 +440,19 @@ namespace eosiosystem {
 
       require_auth( payer );
 
-      // TODO: make conidtion name an enum
       vector<condition> conditions {
-         condition{"identity"_n, {"true"}}
+         condition{provider_account, "identity"_n, {"true"}}
       };
 
-      vector<condition> result;
+      vector<condition> payer_check;
       // no validation if worbli.prov account does not exist.
-      result = is_account(provider_account) ? validate(provider_account, payer, conditions) : result;
+      payer_check = is_account(provider_account) ? validate(payer, conditions) : payer_check;
 
-      bool can_buy = result.empty();
+      vector<condition> reciever_check;
+      // no validation if worbli.prov account does not exist.
+      reciever_check = is_account(provider_account) ? validate(payer, conditions) : reciever_check;
+
+      bool can_buy = payer_check.empty();
 
       check( payer == "worbli.admin"_n || payer == get_self() || can_buy,
              "RAM purchase denied. " + payer.to_string() + " failed identity check" );

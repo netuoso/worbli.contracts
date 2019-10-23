@@ -133,10 +133,10 @@ namespace eosiosystem {
          // TODO: make condition name an enum
          // TODO: add optional comparator to condition >, <, = etc...
          std::vector<worblisystem::condition> conditions {
-            worblisystem::condition{"identity"_n, {"true"}}
+            worblisystem::condition{provider_account, "identity"_n, {"true"}}
          };
 
-         auto result = worblisystem::validate(provider_account, creator, conditions);
+         auto result = worblisystem::validate(creator, conditions);
          check(result.empty(), creator.to_string() + " failed identity check");
 
          /**
@@ -151,7 +151,6 @@ namespace eosiosystem {
         subaccount_table subaccounts(_self, creator.value);
         auto sub_count = std::distance(subaccounts.cbegin(),subaccounts.cend());
 
-        // if accountinfo.max_subaccount < 0 use wstate.max_subaccount
         max_subaccounts = max_subaccounts < 0 ? wstate.max_subaccounts : max_subaccounts;
         check( max_subaccounts > sub_count, "subaccount limit reached" );
 

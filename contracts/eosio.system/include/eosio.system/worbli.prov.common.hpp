@@ -9,26 +9,28 @@ namespace worblisystem
     {
         name name;
         string value;
+        time_point_sec expiration;
         uint64_t primary_key() const { return name.value; }
 
-        EOSLIB_SERIALIZE(account_attribute, (name)(value))
+        EOSLIB_SERIALIZE(account_attribute, (name)(value)(expiration))
     };
 
     typedef eosio::multi_index<name("registry"), account_attribute> registry;
 
     struct condition
     {
+        name provider;
         name attribute;
         vector<string> values;
     };
 
-    inline vector<condition> validate(name provider, name account, vector<condition> conditions)
+    inline vector<condition> validate(name account, vector<condition> conditions)
     {
         vector<condition> failed;
 
         for (condition condition : conditions)
         {
-            registry registry_table(provider, account.value);
+            registry registry_table(condition.provider, account.value);
             auto itr = registry_table.find(condition.attribute.value);
 
             if (itr == registry_table.end() ||
@@ -48,7 +50,7 @@ namespace worblisystem
     @param attribute attribute to lookup
     @return optional containg an int64_t.
             nullopt if error
-            -1 if value doesn't exists
+            -1 if value doesn't exist
 */
     inline const std::optional<int64_t> getint(name provider, name account, name attribute)
     {
@@ -67,6 +69,32 @@ namespace worblisystem
         }
 
         return std::optional<int64_t>{-1};
+    }
+
+/**
+    Returns an boolean value from a registry
+
+    @param provider account hosting the provider contract.
+    @param account account the attribute is associated to
+    @param attribute attribute to lookup
+    @return optional containg an boolean.
+            nullopt if error or value doesn't exist
+*/
+    inline const std::optional<bool> getbool(name provider, name account, name attribute)
+    {
+        registry registry_table(provider, account.value);
+        auto itr = registry_table.find(attribute.value);
+
+        if (itr != registry_table.end()) {
+            if (itr->value == "true")
+                return std::optional<bool>{true};
+            if (itr->value == "false")
+                return std::optional<bool>{false};
+
+            return std::nullopt;
+        }
+
+        return std::nullopt;
     }
 
    static constexpr eosio::name regulator_account{"worbli.reg"_n};

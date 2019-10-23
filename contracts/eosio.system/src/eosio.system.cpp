@@ -5,7 +5,6 @@
 #include <eosio/dispatcher.hpp>
 
 #include "worbli.cpp"
-#include "cleanup.cpp"
 
 namespace eosiosystem {
 
