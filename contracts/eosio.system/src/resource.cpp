@@ -23,7 +23,7 @@ namespace eosiosystem {
         check(timestamp == next, "invalid timestamp");
         check(next <=  time_point_sec(current_time_point().sec_since_epoch() - 86400), "cannot settotal for future date");
 
-        metrics_table m_t("eosio"_n, "eosio"_n.value);
+        metrics_table m_t(get_self(), get_self().value);
         auto m_itr = m_t.find(uint64_t(timestamp.sec_since_epoch()));
         // This should not happen.  Metrics will be populated in onblock action
         check(m_itr != m_t.end(), "metric does not exist, please try later");
@@ -357,6 +357,31 @@ namespace eosiosystem {
             s.account = account;
             });
         }
+    }
+
+    ACTION system_contract::initresource(time_point_sec start)
+    {
+        require_auth(get_self());
+        system_usage_table u_t(get_self(), get_self().value);
+
+        check(u_t.begin() == u_t.end(), "init already called");
+
+        uint64_t pk = u_t.available_primary_key();
+        u_t.emplace(get_self(), [&](auto &h) {
+            h.id = pk;
+            h.timestamp = start;
+            h.use_cpu = 0;
+            h.use_net = 0;
+            h.daycount = 0;
+            h.locked_total = asset(0, eosio::symbol("WBI", 4));
+            h.ma_cpu = 0;
+            h.ma_net = 0;
+            h.ema_cpu = 0;
+            h.ema_net = 0;
+            h.utility_daily = 0;
+            h.bppay_daily = 0;
+            h.locking_daily = 0;
+        });
     }
 
     bool system_contract::is_source(name source)

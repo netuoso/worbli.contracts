@@ -1264,6 +1264,12 @@ namespace eosiosystem {
          [[eosio::action]]
          void setwparams(uint64_t max_subaccounts);
 
+         [[eosio::action]]
+         void setwgstate(time_point_sec last_inflation_print, time_point_sec last_metric_read);
+
+         [[eosio::action]]
+         void initresource(time_point_sec start);
+
          // functions defined in resource.cpp
          // resource DISTRIBUTION functions
          ACTION settotal(name source, float total_cpu_quantity, float total_net_quantity, time_point_sec timestamp);

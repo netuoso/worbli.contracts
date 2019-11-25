@@ -46,26 +46,35 @@ void system_contract::onblock(ignore<block_header>)
       update_elected_producers(timestamp);
    }
 
-   if ( _wgstate.last_inflation_print != time_point_sec(0) )
-   { // new resource model
-
+   if ( _wgstate.last_metric_read != time_point_sec(0) ) {
       // grab locking and token supply metrics once a day
       if (ct.sec_since_epoch() - _wgstate.last_metric_read.sec_since_epoch() > seconds(seconds_per_day).to_seconds())
       {
-         time_point_sec next = time_point_sec(86400 + _wgstate.last_metric_read.sec_since_epoch());
+         time_point_sec next = time_point_sec(seconds_per_day + _wgstate.last_metric_read.sec_since_epoch());
          const asset token_supply = eosio::token::get_supply(token_account, core_symbol().code());
 
          // TODO: store leasing table code and scope configuration in config table
+         asset locked = asset(0, core_symbol());
+
          leasing_table l_t("leasing"_n, "leasing"_n.value);
          if (l_t.end() != l_t.begin()) {
             auto itr = l_t.begin();
-            metrics_table m_t(get_self(), get_self().value);
-            m_t.emplace(get_self(), [&](auto &item) {
-               item.wbi_supply = token_supply;
-               item.wbi_locked = itr->locked;
-            });
+            locked = itr->locked;
          }
+            
+         metrics_table m_t(get_self(), get_self().value);
+         m_t.emplace(get_self(), [&](auto &item) {
+            item.timestamp = next;
+            item.wbi_supply = token_supply;
+            item.wbi_locked = locked;
+         });
+
+         _wgstate.last_metric_read = next;
       }
+   }
+
+
+   if ( _wgstate.last_inflation_print != time_point_sec(0) ) { // new resource model
 
       /**
           * Inflation issue requests are created by an oracle via the worbli.resource contract
