@@ -8,6 +8,7 @@
 
 #include <eosio.system/exchange_state.hpp>
 #include <eosio.system/worbli.hpp>
+#include <eosio.system/resource.hpp>
 #include <eosio.system/native.hpp>
 
 #include <deque>
@@ -25,8 +26,6 @@
 #define CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX 1
 
 namespace eosiosystem {
-
-   using namespace worblisystem;
 
    using eosio::asset;
    using eosio::block_timestamp;
@@ -557,8 +556,13 @@ namespace eosiosystem {
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
          producer_pay_table      _producer_pay;
-         worbli_params_singleton _worbliparams;
-         worbli_params           _wstate;
+         worbli_params_singleton _worbli_params;
+         worbli_params           _worbli_params_state;
+         wglobal_state_singleton _wglobal;
+         worbli_global_state     _wgstate;
+         inflation_table         _inflation;
+         resource_config_singleton _resource_config;
+         resource_config_state     _resource_config_state;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -1259,6 +1263,19 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setwparams(uint64_t max_subaccounts);
+
+         // functions defined in resource.cpp
+         // resource DISTRIBUTION functions
+         ACTION settotal(name source, float total_cpu_quantity, float total_net_quantity, time_point_sec timestamp);
+         ACTION adddistrib(name source, name account, float cpu_quantity, float net_quantity, time_point_sec timestamp);
+         ACTION closedistrib(name source, time_point_sec timestamp);
+         ACTION claimdistrib(name account);
+         // resource CONFIGURATION functions
+         ACTION updconfig(bool paused, uint32_t emadraglimit);
+         ACTION addupdsource(name account, uint8_t in_out);
+
+         // resource helper functions
+         bool is_source(name source);
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;

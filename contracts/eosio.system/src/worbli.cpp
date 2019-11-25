@@ -3,6 +3,8 @@
 
 namespace eosiosystem {
 
+   using namespace worblisystem;
+
    void system_contract::delegateram( name from, name receiver,
                                      int64_t bytes )
    {
@@ -114,12 +116,11 @@ namespace eosiosystem {
       check( new_level > 0, "usage level cannot be negative" );
 
       _gstate.network_usage_level = new_level;
-      _global.set( _gstate, _self );
    }
 
     void system_contract::setwparams(uint64_t max_subaccounts) {
       require_auth( "worbli.admin"_n );
-      _wstate.max_subaccounts = max_subaccounts;
+      _worbli_params_state.max_subaccounts = max_subaccounts;
     }
 
    // worbli additions
