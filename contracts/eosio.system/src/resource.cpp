@@ -1,4 +1,5 @@
 #include <eosio.system/eosio.system.hpp>
+#include <eosio.token/eosio.token.hpp>
 
 
 namespace eosiosystem {
@@ -231,7 +232,7 @@ namespace eosiosystem {
         });
 
         // open contract for user stats
-        _resource_config_state.open = true;
+        _resource_config_state.locked = true;
 
         // reset totals for user stats
         _resource_config_state.allocated_cpu = 0.0;
@@ -240,13 +241,42 @@ namespace eosiosystem {
 
     }
 
+    /**
+    * Todo: close the system usage total and issue the daily inflation.
+    **/
+    ACTION system_contract::commitusage(name source, time_point_sec timestamp) {
+        require_auth(source);
+        check(is_source(source) == true, "not authorized to execute this action");
+        check(_resource_config_state.locked, "distribution is closed");
+
+        system_usage_table u_t(get_self(), get_self().value);
+        auto itr_u = u_t.end();
+        itr_u--;
+
+        check(itr_u->timestamp == timestamp, "timestamp is not correct, collecting stats for: " + std::to_string(timestamp.sec_since_epoch()));
+
+        {
+            token::issue_action issue_act{token_account, {{get_self(), active_permission}}};
+            issue_act.send(get_self(), itr_u->locking_tokens + itr_u->bppay_tokens + itr_u->utility_tokens, "issue daily inflation");
+         }
+         {
+            token::transfer_action transfer_act{token_account, {{get_self(), active_permission}}};
+            transfer_act.send(get_self(), saving_account, itr_u->locking_tokens, "leasing daily");
+            transfer_act.send(get_self(), ppay_account, itr_u->bppay_tokens, "producer daily");
+            transfer_act.send(get_self(), usage_account, itr_u->utility_tokens, "usage daily");
+         }
+
+        _resource_config_state.locked = false; 
+        _wgstate.last_inflation_print = timestamp;
+
+    }
+
     ACTION system_contract::adddistrib(name source, name account, float cpu_quantity, float net_quantity, time_point_sec timestamp)
     {  
         require_auth(source);
         check(is_account(account), account.to_string() + " is not an account");
-        check(is_source(source) == true, "not authorized to execute this action");
-        //check(!paused(), "this contract has been paused - please try again later");
-        check(_resource_config_state.open, "the collection period has been closed");
+        check(is_source(source) == true, "not authorized to execute this action");;
+        check(_resource_config_state.locked, "the collection period has been closed");
 
         system_usage_table u_t(get_self(), get_self().value);
         auto itr_u = u_t.end();
@@ -281,43 +311,11 @@ namespace eosiosystem {
         }
     }
 
-    /** 
-    * Todo: close the distribution and issue the daily inflation.
-    **/
-    ACTION system_contract::closedistrib(name source, time_point_sec timestamp) {
-        require_auth(source);
-        check(is_source(source) == true, "not authorized to execute this action");
-        check(_resource_config_state.open, "distribution is closed");
-
-        system_usage_table u_t(get_self(), get_self().value);
-        auto itr_u = u_t.end();
-        itr_u--;
-
-        check(itr_u->timestamp == timestamp, "timestamp is not correct, collecting stats for: " + std::to_string(timestamp.sec_since_epoch()));
-        _resource_config_state.open = false;
-
-
-
-        // inflation table to read by eosio.system to issue inflation
-        // there may be a timing issue if users try to claim before inflation is issued
-        /**
-        inflation_table i_t(get_self(), get_self().value);
-        
-        i_t.emplace(get_self(), [&](auto &i) {
-            i.timestamp = timestamp;
-            i.utility_daily = itr_u->utility_tokens;
-            i.bppay_daily = itr_u->bppay_tokens;
-            i.locking_daily = itr_u->locking_tokens;
-        });
-        **/
-    }
-
     ACTION system_contract::claimdistrib(name account)
     {
 
         require_auth(account);
-        //check(!paused(), "this contract has been paused - please try again later");
-        check(!_resource_config_state.open, "cannot claim while inflation calculation is running");
+        check(!_resource_config_state.locked, "cannot claim while inflation calculation is running");
 
         account_pay_table a_t(get_self(), get_self().value);
         auto itr = a_t.find(account.value);

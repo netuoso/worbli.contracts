@@ -76,43 +76,6 @@ void system_contract::onblock(ignore<block_header>)
 
    if ( _wgstate.last_inflation_print != time_point_sec(0) ) { // new resource model
 
-      /**
-          * Inflation issue requests are created by an oracle via the worbli.resource contract
-          * As this is an offchain process it is possible for issue requests to be delayed for arbitrary durations
-          * We need to enforce the following rules:
-          * - last_inflation_print can only move forward in 24 hour increments
-          * - new inflation request timestamp must be in the past
-          *
-          * We only need to check for a new issue request once last_inflation_print is > 24 hours in the past
-          *
-          * TODO: consider moving this to an action to eliminate "polling" the inflation table for new issue requests
-          *
-          * */
-      if (ct.sec_since_epoch() - _wgstate.last_inflation_print.sec_since_epoch() > seconds(seconds_per_day).to_seconds())
-      {
-         
-         time_point_sec next = time_point_sec(86400 + _wgstate.last_inflation_print.sec_since_epoch());
-         auto itr = _inflation.find(next.sec_since_epoch());
-
-         if (itr == _inflation.end())
-         {
-            _wgstate.message = "issue request for timestamp " + std::to_string(next.sec_since_epoch()) +
-                               " not found";
-            return;
-         }
-
-         // can move this to the add distrib action
-         {
-            token::issue_action issue_act{token_account, {{get_self(), active_permission}}};
-            issue_act.send(get_self(), itr->amount, "issue tokens for daily inflation");
-         }
-         {
-            token::transfer_action transfer_act{token_account, {{get_self(), active_permission}}};
-            //transfer_act.send(get_self(), resource_account, itr->amount, "daily inflation");
-         }
-
-         _wgstate.last_inflation_print = itr->timestamp;
-      }
    }
    else
    { // legacy inflation model

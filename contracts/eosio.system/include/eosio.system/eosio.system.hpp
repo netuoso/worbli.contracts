@@ -560,7 +560,6 @@ namespace eosiosystem {
          worbli_params           _worbli_params_state;
          wglobal_state_singleton _wglobal;
          worbli_global_state     _wgstate;
-         inflation_table         _inflation;
          resource_config_singleton _resource_config;
          resource_config_state     _resource_config_state;
 
@@ -1274,7 +1273,7 @@ namespace eosiosystem {
          // resource DISTRIBUTION functions
          ACTION settotal(name source, float total_cpu_quantity, float total_net_quantity, time_point_sec timestamp);
          ACTION adddistrib(name source, name account, float cpu_quantity, float net_quantity, time_point_sec timestamp);
-         ACTION closedistrib(name source, time_point_sec timestamp);
+         ACTION commitusage(name source, time_point_sec timestamp);
          ACTION claimdistrib(name account);
          // resource CONFIGURATION functions
          ACTION updconfig(bool paused, uint32_t emadraglimit);

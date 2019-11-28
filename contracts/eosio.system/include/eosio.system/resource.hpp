@@ -27,14 +27,6 @@ namespace eosiosystem {
       uint64_t primary_key() const { return (timestamp.sec_since_epoch()); }
    };
 
-   struct [[eosio::table, eosio::contract("eosio.system")]] daily_inflation
-   {
-      eosio::time_point_sec timestamp;
-      asset amount;
-
-      uint64_t primary_key() const { return (timestamp.sec_since_epoch()); }
-   };
-
    struct [[eosio::table("resourceconf"), eosio::contract("eosio.system")]] resource_config_state
    {
       bool paused;
@@ -43,7 +35,7 @@ namespace eosiosystem {
       float allocated_net = 0.0;
       float allocated_total = 0.0;
       float unetpay = 0.0;
-      bool open = false;
+      bool locked = false;
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] sourceauth
@@ -87,7 +79,6 @@ namespace eosiosystem {
 
    typedef eosio::multi_index<"systemusage"_n, system_usage> system_usage_table;
    typedef eosio::multi_index<"metrics"_n, metric> metrics_table;
-   typedef eosio::multi_index<"inflation"_n, daily_inflation> inflation_table;
    typedef eosio::singleton<"resourceconf"_n, resource_config_state> resource_config_singleton;
    typedef eosio::multi_index<"sourceauths"_n, sourceauth> sourceauth_table;
    typedef eosio::multi_index<"accountpay"_n, account_pay> account_pay_table;
