@@ -288,7 +288,7 @@ namespace eosiosystem {
 
     }
 
-    ACTION system_contract::adddistrib(name source, name account, float cpu_quantity, float net_quantity, time_point_sec timestamp)
+    ACTION system_contract::adddistrib(name source, name account, uint64_t user_cpu_us, uint64_t user_net_words, time_point_sec timestamp)
     {  
         require_auth(source);
         check(is_account(account), account.to_string() + " is not an account");
@@ -300,13 +300,17 @@ namespace eosiosystem {
         itr_u--;
 
         check(itr_u->timestamp == timestamp, "timestamp is not correct, collecting stats for: " + std::to_string(timestamp.sec_since_epoch()));
-        // check(_config_state.allocated_cpu + cpu_quantity <= 100, "cpu allocation greater than 100%" );
-        // check(_config_state.allocated_net + net_quantity <= 100, "net allocation greater than 100%" );
+
+        float net_quantity = static_cast<float>( user_net_words * 8) / itr_u->total_net_words;
+        float cpu_quantity = static_cast<float>( user_cpu_us / itr_u->total_cpu_us );
+
+        check(_resource_config_state.allocated_cpu + user_cpu_us <= itr_u->total_cpu_us, "cpu allocation greater than 100%" );
+        check(_resource_config_state.allocated_net + user_net_words <= itr_u->total_net_words, "net allocation greater than 100%" );
         check(_resource_config_state.allocated_total + net_quantity + cpu_quantity <= 100, "total resource allocation greater than 100%" );
         
         _resource_config_state.allocated_total += net_quantity + cpu_quantity;
-        _resource_config_state.allocated_cpu += cpu_quantity;
-        _resource_config_state.allocated_net += net_quantity;
+        _resource_config_state.allocated_cpu += user_cpu_us;
+        _resource_config_state.allocated_net += user_net_words;
         _resource_config_state.unetpay += net_quantity * itr_u->utility_daily / 100;
 
         float add_claim = cpu_quantity * itr_u->utility_daily;

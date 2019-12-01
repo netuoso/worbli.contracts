@@ -442,12 +442,12 @@ public:
       );
    }
 
-   action_result adddistrib(name source, name account, float cpu_quantity, float net_quantity, string timestamp) {
+   action_result adddistrib(name source, name account, uint64_t user_cpu_us, uint64_t user_net_words, string timestamp) {
       return push_system_action( N(worbli.admin), N(adddistrib), mvo()
            ( "source", source )
            ( "account", account )
-           ( "cpu_quantity", cpu_quantity )
-           ( "net_quantity", net_quantity )
+           ( "user_cpu_us", user_cpu_us )
+           ( "user_net_words", user_net_words )
            ( "timestamp", timestamp )
       );
    }

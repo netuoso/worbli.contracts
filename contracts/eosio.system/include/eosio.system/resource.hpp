@@ -23,8 +23,8 @@ namespace eosiosystem {
    {
       bool paused;
       uint32_t emadraglimit = 2;
-      float allocated_cpu = 0.0;
-      float allocated_net = 0.0;
+      uint64_t allocated_cpu = 0;
+      uint64_t allocated_net = 0;
       float allocated_total = 0.0;
       float unetpay = 0.0;
       bool locked = false;

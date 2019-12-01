@@ -8,4 +8,7 @@ Max net per block: 1048576 bytes = 1M
 Max cpu per block: 200 us 
 
 Daily Net Capacity (bytes): 1048576 * 2 * 60 * 60 * 24
-Daily CPU Capacity (us): 200 * 2 * 60 * 60 * 24
+Daily CPU Capacity (us): 200000 * 2 * 60 * 60 * 24
+
+22649241600
+226246208
