@@ -432,11 +432,12 @@ public:
       );
    }
 
-   action_result settotal(name source, float total_cpu_quantity, float total_net_quantity, string timestamp) {
+   action_result settotal(name source, float total_cpu_us, float total_net_words, asset locked_tokens, string timestamp) {
       return push_system_action( N(worbli.admin), N(settotal), mvo()
            ( "source", source )
-           ( "total_cpu_quantity", total_cpu_quantity )
-           ( "total_net_quantity", total_net_quantity )
+           ( "total_cpu_us", total_cpu_us )
+           ( "total_net_words", total_net_words )
+           ( "locked_tokens",  locked_tokens)
            ( "timestamp", timestamp )
       );
    }

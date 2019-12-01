@@ -19,14 +19,6 @@ namespace eosiosystem {
    };
    typedef eosio::multi_index<"leasing"_n, lease_info> leasing_table;
 
-   struct [[eosio::table, eosio::contract("eosio.system")]] metric
-   {
-      eosio::time_point_sec timestamp;
-      asset wbi_supply;
-      asset wbi_locked;
-      uint64_t primary_key() const { return (timestamp.sec_since_epoch()); }
-   };
-
    struct [[eosio::table("resourceconf"), eosio::contract("eosio.system")]] resource_config_state
    {
       bool paused;
@@ -48,7 +40,9 @@ namespace eosiosystem {
    {
       uint64_t id;
       uint32_t daycount;
-      asset locked_total;
+      asset total_locked_tokens;
+      uint64_t total_cpu_us;
+      uint64_t total_net_words;
       float use_cpu;
       float use_net;
       float ma_cpu;
@@ -78,7 +72,6 @@ namespace eosiosystem {
    
 
    typedef eosio::multi_index<"systemusage"_n, system_usage> system_usage_table;
-   typedef eosio::multi_index<"metrics"_n, metric> metrics_table;
    typedef eosio::singleton<"resourceconf"_n, resource_config_state> resource_config_singleton;
    typedef eosio::multi_index<"sourceauths"_n, sourceauth> sourceauth_table;
    typedef eosio::multi_index<"accountpay"_n, account_pay> account_pay_table;

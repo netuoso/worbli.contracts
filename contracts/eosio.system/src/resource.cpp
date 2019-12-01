@@ -4,11 +4,14 @@
 
 namespace eosiosystem {
 
-    ACTION system_contract::settotal(name source, float total_cpu_quantity, float total_net_quantity, time_point_sec timestamp)
+    ACTION system_contract::settotal(name source, uint64_t total_cpu_us, uint64_t total_net_words, asset total_locked_tokens, time_point_sec timestamp)
     {
         require_auth(source);
         check(is_source(source) == true, "not authorized to execute this action");
         //check(!_config_state.open, "prior collection period is still open");
+
+        print(" :: total_cpu_us: ");
+        print(std::to_string(total_cpu_us));
 
         system_usage_table u_t(get_self(), get_self().value);
         auto itr = u_t.end();
@@ -24,11 +27,6 @@ namespace eosiosystem {
         check(timestamp == next, "invalid timestamp");
         check(next <=  time_point_sec(current_time_point().sec_since_epoch() - 86400), "cannot settotal for future date");
 
-        metrics_table m_t(get_self(), get_self().value);
-        auto m_itr = m_t.find(uint64_t(timestamp.sec_since_epoch()));
-        // This should not happen.  Metrics will be populated in onblock action
-        check(m_itr != m_t.end(), "metric does not exist, please try later");
-
         // Initial Inflation
         float VT = 0.0185; // Initial Inflation Constant for Value Transfer
         float MP = 0.2947; // TO-DO: move these 2 constants to the config talbe for easier adjusting?
@@ -38,6 +36,21 @@ namespace eosiosystem {
 
         float previousAverageCPU = itr->ma_cpu;
         float previousAverageNET = itr->ma_net;
+
+        /**
+        * Turn utility readings into ratios
+        **/
+        uint64_t system_max_cpu = static_cast<uint64_t>(_gstate.max_block_cpu_usage) * 2 * 60 * 60 * 24;
+        float usage_cpu = static_cast<float>(total_cpu_us) / system_max_cpu;
+
+        uint64_t system_max_net = static_cast<uint64_t>(_gstate.max_block_net_usage) * 2 * 60 * 60 * 24;
+        float usage_net = static_cast<float>(total_net_words * 8) / system_max_net;
+
+         print(" :: system_max_cpu: ");
+         print(std::to_string(system_max_cpu));
+
+         print(" :: usage_cpu: ");
+         print(std::to_string(usage_cpu));
 
         float ma_cpu_total = 0.0;
         float ma_net_total = 0.0;
@@ -61,8 +74,8 @@ namespace eosiosystem {
         print(" :: period: ");
         print(std::to_string(period));
 
-        float UTIL_CPU_MA = worbli::calcMA(ma_cpu_total, period, total_cpu_quantity);
-        float UTIL_NET_MA = worbli::calcMA(ma_net_total, period, total_net_quantity);
+        float UTIL_CPU_MA = worbli::calcMA(ma_cpu_total, period, usage_cpu);
+        float UTIL_NET_MA = worbli::calcMA(ma_net_total, period, usage_net);
 
         float UTIL_CPU_EMA;
         float UTIL_NET_EMA;
@@ -72,8 +85,8 @@ namespace eosiosystem {
         // use simple moving average until we reach draglimit samples
         if (pk >= draglimit)
         {
-            UTIL_CPU_EMA = worbli::calcEMA(previousAverageCPU, draglimit, total_cpu_quantity);
-            UTIL_NET_EMA = worbli::calcEMA(previousAverageNET, draglimit, total_net_quantity);
+            UTIL_CPU_EMA = worbli::calcEMA(previousAverageCPU, draglimit, usage_cpu);
+            UTIL_NET_EMA = worbli::calcEMA(previousAverageNET, draglimit, usage_net);
         }
         else
         {
@@ -105,14 +118,13 @@ namespace eosiosystem {
 
         // Locking
 
-        asset locked_total = m_itr->wbi_locked;
-        asset token_supply = m_itr->wbi_supply;
+        const asset token_supply = eosio::token::get_supply(token_account, core_symbol().code());
 
-        float L = static_cast<float>(locked_total.amount) / token_supply.amount;
+        float L = static_cast<float>(total_locked_tokens.amount) / token_supply.amount;
         float Lprime = (1 - UTIL_TOTAL_EMA) * L;
 
         print(" :: locked_totals: ");
-        print(std::to_string(locked_total.amount));
+        print(std::to_string(total_locked_tokens.amount));
 
         print(" :: L: ");
         print(std::to_string(L));
@@ -210,13 +222,18 @@ namespace eosiosystem {
         auto bppay_tokens = static_cast<int64_t>( (bppay_daily * double(token_supply.amount)));
         auto locking_tokens = static_cast<int64_t>( (locking_daily * double(token_supply.amount)));
 
+        print(" :: utility_tokens: ");
+        print(std::to_string(utility_tokens));
+
         u_t.emplace(get_self(), [&](auto &h) {
             h.id = pk;
             h.timestamp = timestamp;
-            h.use_cpu = total_cpu_quantity;
-            h.use_net = total_net_quantity;
             h.daycount = day_count;
-            h.locked_total = asset(0, eosio::symbol("WBI", 4));
+            h.total_cpu_us = total_cpu_us;
+            h.total_net_words = total_net_words;
+            h.use_cpu = usage_cpu;
+            h.use_net = usage_net;
+            h.total_locked_tokens = total_locked_tokens;
             h.ma_cpu = UTIL_CPU_MA;
             h.ma_net = UTIL_NET_MA;
             h.ema_cpu = UTIL_CPU_EMA;
@@ -371,7 +388,7 @@ namespace eosiosystem {
             h.use_cpu = 0;
             h.use_net = 0;
             h.daycount = 0;
-            h.locked_total = asset(0, eosio::symbol("WBI", 4));
+            h.total_locked_tokens = asset(0, eosio::symbol("WBI", 4));
             h.ma_cpu = 0;
             h.ma_net = 0;
             h.ema_cpu = 0;

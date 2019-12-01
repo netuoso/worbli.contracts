@@ -22,7 +22,8 @@ BOOST_FIXTURE_TEST_CASE( test_average_calculations, worbli_system_tester, * boos
    BOOST_REQUIRE_EQUAL( success(), updconfig( false, 1 ) );
 
    BOOST_REQUIRE_EQUAL( success(), init_resource( "2019-09-18T23:59:59" ) );
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.005, 0.005, "2019-09-19T23:59:59") );
+
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
    
    // test averages with 1 period: total usage 1%
    auto history = get_system_usage(1);
@@ -35,19 +36,18 @@ BOOST_FIXTURE_TEST_CASE( test_average_calculations, worbli_system_tester, * boos
    BOOST_REQUIRE_EQUAL( success(), updconfig( false, 5 ) );
    produce_blocks( 6 );
 
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.05, 0.05, "2019-09-20T23:59:59") );
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.05, 0.05, "2019-09-21T23:59:59") );
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.05, 0.05, "2019-09-22T23:59:59") );
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.05, 0.05, "2019-09-23T23:59:59") );
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.05, 0.05, "2019-09-24T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-20T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-21T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-22T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-23T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-24T23:59:59") );
 
    history = get_system_usage(6);
 
    BOOST_REQUIRE_EQUAL( "0.05000000074505806", history["ma_cpu"] );
    BOOST_REQUIRE_EQUAL( "0.05000000074505806", history["ma_net"] );
 
-   //BOOST_REQUIRE_EQUAL( success(), setmetric( "2019-09-25T00:00:00.000", "10000.0000 WBI", "2500.0000 WBI" ) );
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.05, 0.05, "2019-09-25T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-25T23:59:59") );
 
    history = get_system_usage(7);
    
@@ -78,15 +78,15 @@ BOOST_FIXTURE_TEST_CASE( test_resource_oracle, worbli_system_tester ) try {
    produce_block( fc::days(1) );
    produce_blocks( 2 );
 
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.005, 0.005, "2019-12-31T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-12-31T23:59:59") );
    
    // future date should fail
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "cannot settotal for future date" ),
-      settotal("worbli.admin", 0.005, 0.005, "2020-01-01T23:59:59") );
+      settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2020-01-01T23:59:59") );
 
    // past date should fail
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "invalid timestamp" ),
-      settotal("worbli.admin", 0.005, 0.005, "2019-12-15T23:59:59") );
+      settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-12-15T23:59:59") );
 
 } FC_LOG_AND_RETHROW()
 
@@ -106,7 +106,7 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), init_resource( "2019-09-18T23:59:59" ) );
    BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00", "2019-09-18T23:59:59"));
 
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 0.005, 0.005, "2019-09-19T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
    BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user1", 2.0, 0.005, "2019-09-19T23:59:59") );
    BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user2", 2.5, 0.005, "2019-09-19T23:59:59") );
    //BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user3", 99.0, 0.005, "2019-09-19T23:59:59") );
