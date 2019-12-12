@@ -4,11 +4,11 @@
 
 namespace eosiosystem {
 
-    ACTION system_contract::settotal(name source, uint64_t total_cpu_us, uint64_t total_net_words, asset total_locked_tokens, time_point_sec timestamp)
+    ACTION system_contract::settotal(name source, uint64_t total_cpu_us, uint64_t total_net_words, time_point_sec timestamp)
     {
         require_auth(source);
         check(is_source(source) == true, "not authorized to execute this action");
-        //check(!_config_state.open, "prior collection period is still open");
+        check(!_resource_config_state.locked, "prior collection period is still open");
 
         print(" :: total_cpu_us: ");
         print(std::to_string(total_cpu_us));
@@ -45,6 +45,9 @@ namespace eosiosystem {
 
         uint64_t system_max_net = static_cast<uint64_t>(_gstate.max_block_net_usage) * 2 * 60 * 60 * 24;
         float usage_net = static_cast<float>(total_net_words * 8) / system_max_net;
+
+        float net_percent_total = usage_net / (usage_net + usage_cpu);
+        float cpu_percent_total = usage_cpu / (usage_net + usage_cpu);
 
          print(" :: system_max_cpu: ");
          print(std::to_string(system_max_cpu));
@@ -116,66 +119,7 @@ namespace eosiosystem {
         print(" :: Bppay: ");
         print(std::to_string(Bppay));
 
-        // Locking
-
         const asset token_supply = eosio::token::get_supply(token_account, core_symbol().code());
-
-        float L = static_cast<float>(total_locked_tokens.amount) / token_supply.amount;
-        float Lprime = (1 - UTIL_TOTAL_EMA) * L;
-
-        print(" :: locked_totals: ");
-        print(std::to_string(total_locked_tokens.amount));
-
-        print(" :: L: ");
-        print(std::to_string(L));
-
-        print(" :: Lprime: ");
-        print(std::to_string(Lprime));
-
-        float x = (1 - UTIL_TOTAL_EMA) * (1 - Lprime) / (Lprime + (1 - UTIL_TOTAL_EMA) * (1 - Lprime));
-        float y = 1 / (1 - log(UTIL_TOTAL_EMA));
-        float z = pow(2, -(abs(UTIL_TOTAL_EMA - 0.5)));
-
-        print(" :: x: ");
-        print(std::to_string(x));
-
-        print(" :: y: ");
-        print(std::to_string(y));
-
-        print(" :: z: ");
-        print(std::to_string(z));
-
-        float inflation_Lprime = (1 - (UTIL_TOTAL_EMA + Lprime)) / (1 - (UTIL_TOTAL_EMA + Lprime) - worbli::get_c(UTIL_TOTAL_EMA + Lprime) * VT) - 1;
-
-        print(" ::  get_c(UTIL_TOTAL_EMA + Lprime): ");
-        print(std::to_string(worbli::get_c(UTIL_TOTAL_EMA + Lprime)));
-
-        print(" :: inflation_Lprime: ");
-        print(std::to_string(inflation_Lprime));
-
-        float bp_inflation_Lprime = worbli::get_c(UTIL_TOTAL_EMA + Lprime) * MP;
-
-        print(" :: bp_inflation_Lprime: ");
-        print(std::to_string(bp_inflation_Lprime));
-
-        float Upaygross_inflation_Lprime = pow(1 + inflation_Lprime, 1 - bp_inflation_Lprime) - 1;
-
-        print(" :: Upaygross_inflation_Lprime: ");
-        print(std::to_string(Upaygross_inflation_Lprime));
-
-        float uy_inflation_Lprime = Upaygross_inflation_Lprime / (UTIL_TOTAL_EMA + Lprime);
-
-        print(" :: uy_inflation_Lprime: ");
-        print(std::to_string(uy_inflation_Lprime));
-
-        float LY_UL = pow(1 + uy_inflation_Lprime, x * y * z) - 1;
-        float LP_UL = LY_UL * Lprime;
-
-        print(" :: LY_UL: ");
-        print(std::to_string(LY_UL));
-
-        print(" :: LP_UL: ");
-        print(std::to_string(LP_UL));
 
         // Inflation waterfall
         float Min_Upaynet = inflation * UTIL_TOTAL_EMA;
@@ -193,17 +137,7 @@ namespace eosiosystem {
         print(" :: Bppay_final: ");
         print(std::to_string(Bppay_final));
 
-        float Waterfall_Locking = inflation * (1 - UTIL_TOTAL_EMA) - Bppay_final;
-
-        print(" :: Waterfall_Locking: ");
-        print(std::to_string(Waterfall_Locking));
-
-        float LP_final = fmin(LP_UL, Waterfall_Locking);
-
-        print(" :: LP_final: ");
-        print(std::to_string(LP_final));
-
-        float Uppaynet = inflation - Bppay_final - LP_final;
+        float Uppaynet = inflation - Bppay_final;
 
         print(" :: Uppaynet: ");
         print(std::to_string(Uppaynet));
@@ -215,12 +149,15 @@ namespace eosiosystem {
 
         float utility_daily = (Uppaynet / inflation) * Daily_i_U;				                //allocate proportionally to Utility
         float bppay_daily = (Bppay_final / inflation) * Daily_i_U;				              //allocate proportionally to BPs
-        float locking_daily = (LP_final / inflation) * Daily_i_U;
+
+        float cpu_daily = cpu_percent_total * utility_daily;
+        float net_daily = utility_daily - cpu_daily;
+
 
         // calculate inflation amount
-        auto utility_tokens = static_cast<int64_t>( (utility_daily * double(token_supply.amount)));
-        auto bppay_tokens = static_cast<int64_t>( (bppay_daily * double(token_supply.amount)));
-        auto locking_tokens = static_cast<int64_t>( (locking_daily * double(token_supply.amount)));
+        auto utility_tokens = static_cast<int64_t>( (cpu_daily * double(token_supply.amount)));
+        auto bppay_tokens = static_cast<int64_t>( ((bppay_daily + cpu_daily) * double(token_supply.amount)));
+        auto net_tokens = static_cast<int64_t>( (net_daily * double(token_supply.amount)));
 
         print(" :: utility_tokens: ");
         print(std::to_string(utility_tokens));
@@ -231,21 +168,21 @@ namespace eosiosystem {
             h.daycount = day_count;
             h.total_cpu_us = total_cpu_us;
             h.total_net_words = total_net_words;
+            h.net_percent_total = net_percent_total;
+            h.cpu_percent_total = cpu_percent_total;
             h.use_cpu = usage_cpu;
             h.use_net = usage_net;
-            h.total_locked_tokens = total_locked_tokens;
             h.ma_cpu = UTIL_CPU_MA;
             h.ma_net = UTIL_NET_MA;
             h.ema_cpu = UTIL_CPU_EMA;
             h.ema_net = UTIL_NET_EMA;
             h.utility_daily = utility_daily;
             h.bppay_daily = bppay_daily;
-            h.locking_daily = locking_daily;
             h.inflation = inflation;
             h.inflation_daily = Daily_i_U;
-            h.utility_tokens = asset(utility_tokens, eosio::symbol("WBI", 4));
-            h.bppay_tokens = asset(bppay_tokens, eosio::symbol("WBI", 4));
-            h.locking_tokens = asset(locking_tokens, eosio::symbol("WBI", 4));
+            h.utility_tokens = asset(utility_tokens, core_symbol() );
+            h.bppay_tokens = asset(bppay_tokens, core_symbol() );
+            h.net_tokens = asset(net_tokens, core_symbol() );
         });
 
         // open contract for user stats
@@ -254,7 +191,9 @@ namespace eosiosystem {
         // reset totals for user stats
         _resource_config_state.allocated_cpu = 0.0;
         _resource_config_state.allocated_net = 0.0;
-        _resource_config_state.unetpay = 0.0;
+        _resource_config_state.allocated_total = 0.0;
+        _resource_config_state.utility_net_pay = asset( 0, core_symbol() );
+        _resource_config_state.utility_cpu_pay = asset( 0, core_symbol() );
 
     }
 
@@ -274,13 +213,44 @@ namespace eosiosystem {
 
         {
             token::issue_action issue_act{token_account, {{get_self(), active_permission}}};
-            issue_act.send(get_self(), itr_u->locking_tokens + itr_u->bppay_tokens + itr_u->utility_tokens, "issue daily inflation");
+            issue_act.send(get_self(), itr_u->bppay_tokens + itr_u->utility_tokens, "issue daily inflation");
          }
          {
             token::transfer_action transfer_act{token_account, {{get_self(), active_permission}}};
-            transfer_act.send(get_self(), saving_account, itr_u->locking_tokens, "leasing daily");
             transfer_act.send(get_self(), ppay_account, itr_u->bppay_tokens, "producer daily");
             transfer_act.send(get_self(), usage_account, itr_u->utility_tokens, "usage daily");
+         }
+
+         std::vector<name> active_producers;
+         for (const auto &p : _producers)
+         {
+            if (p.active())
+            {
+               active_producers.emplace_back(p.owner);
+            }
+         }
+
+         check(active_producers.size() == _gstate.last_producer_schedule_size, "active_producers must equal last_producer_schedule_size");
+
+         uint64_t earned_pay = uint64_t(itr_u->bppay_tokens.amount / active_producers.size());
+         for (const auto &p : active_producers)
+         {
+
+            auto pay_itr = _producer_pay.find(p.value);
+
+            if (pay_itr == _producer_pay.end())
+            {
+               pay_itr = _producer_pay.emplace(p, [&](auto &pay) {
+                  pay.owner = p;
+                  pay.earned_pay = earned_pay;
+               });
+            }
+            else
+            {
+               _producer_pay.modify(pay_itr, same_payer, [&](auto &pay) {
+                  pay.earned_pay += earned_pay;
+               });
+            }
          }
 
         _resource_config_state.locked = false; 
@@ -301,19 +271,26 @@ namespace eosiosystem {
 
         check(itr_u->timestamp == timestamp, "timestamp is not correct, collecting stats for: " + std::to_string(timestamp.sec_since_epoch()));
 
-        float net_quantity = static_cast<float>( user_net_words * 8) / itr_u->total_net_words;
-        float cpu_quantity = static_cast<float>( user_cpu_us / itr_u->total_cpu_us );
+        float net_percentage = static_cast<float>( user_net_words ) / itr_u->total_net_words;
+        float cpu_percentage = static_cast<float>( user_cpu_us ) / itr_u->total_cpu_us;
 
         check(_resource_config_state.allocated_cpu + user_cpu_us <= itr_u->total_cpu_us, "cpu allocation greater than 100%" );
         check(_resource_config_state.allocated_net + user_net_words <= itr_u->total_net_words, "net allocation greater than 100%" );
-        check(_resource_config_state.allocated_total + net_quantity + cpu_quantity <= 100, "total resource allocation greater than 100%" );
         
-        _resource_config_state.allocated_total += net_quantity + cpu_quantity;
+        // TODO: look into making allocated_total an integer
+        check(_resource_config_state.allocated_total + net_percentage + cpu_percentage <= 100, "total resource allocation greater than 100%" );
+
+        _resource_config_state.allocated_total += net_percentage;
         _resource_config_state.allocated_cpu += user_cpu_us;
         _resource_config_state.allocated_net += user_net_words;
-        _resource_config_state.unetpay += net_quantity * itr_u->utility_daily / 100;
+        
+        auto utility_net_pay = net_percentage * itr_u->net_percent_total * itr_u->utility_tokens.amount;
+        _resource_config_state.utility_net_pay += asset( utility_net_pay, core_symbol() );
 
-        float add_claim = cpu_quantity * itr_u->utility_daily;
+        // utility_daily is a percentage
+        auto add_claim = cpu_percentage * itr_u->cpu_percent_total * itr_u->utility_tokens.amount;
+        asset payout = asset( add_claim, core_symbol() );
+        _resource_config_state.utility_cpu_pay += payout;
 
         account_pay_table a_t(get_self(), get_self().value);
         auto itr_d = a_t.find(account.value);
@@ -321,13 +298,13 @@ namespace eosiosystem {
             a_t.emplace(get_self(), [&](auto &d) {
                 d.account = account;
                 d.timestamp = timestamp;
-                d.payout = add_claim;
+                d.payout = payout;
             });
         } else {
             check(itr_d->timestamp != timestamp, "duplicate distribution" );
             a_t.modify(itr_d, same_payer, [&](auto &d) {
                 d.timestamp = timestamp;
-                d.payout += add_claim;
+                d.payout += payout;
             });
         }
     }
@@ -341,10 +318,9 @@ namespace eosiosystem {
         account_pay_table a_t(get_self(), get_self().value);
         auto itr = a_t.find(account.value);
         check(itr != a_t.end(), "account not found");
-        check(itr->payout != 0, "zero balance to claim");
-        float fquantity = round(itr->payout);
-        asset quantity(fquantity, eosio::symbol("WBI", 4));
+        check(itr->payout != asset( 0, core_symbol() ), "zero balance to claim");
 
+        // transfer payout
         itr = a_t.erase(itr);
 
     }
@@ -386,20 +362,18 @@ namespace eosiosystem {
         check(u_t.begin() == u_t.end(), "init already called");
 
         uint64_t pk = u_t.available_primary_key();
-        u_t.emplace(get_self(), [&](auto &h) {
-            h.id = pk;
-            h.timestamp = start;
-            h.use_cpu = 0;
-            h.use_net = 0;
-            h.daycount = 0;
-            h.total_locked_tokens = asset(0, eosio::symbol("WBI", 4));
-            h.ma_cpu = 0;
-            h.ma_net = 0;
-            h.ema_cpu = 0;
-            h.ema_net = 0;
-            h.utility_daily = 0;
-            h.bppay_daily = 0;
-            h.locking_daily = 0;
+        u_t.emplace(get_self(), [&](auto &u) {
+            u.id = pk;
+            u.timestamp = start;
+            u.use_cpu = 0;
+            u.use_net = 0;
+            u.daycount = 0;
+            u.ma_cpu = 0;
+            u.ma_net = 0;
+            u.ema_cpu = 0;
+            u.ema_net = 0;
+            u.utility_daily = 0;
+            u.bppay_daily = 0;
         });
     }
 

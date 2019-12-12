@@ -6,19 +6,6 @@ namespace eosiosystem {
 
    using namespace eosio;
 
-   /**
-   * TODO: Look this up from a registry table   
-   *
-   **/
-   struct lease_info
-   {
-      uint64_t id;
-      asset locked;
-
-      uint64_t primary_key() const { return (id); }
-   };
-   typedef eosio::multi_index<"leasing"_n, lease_info> leasing_table;
-
    struct [[eosio::table("resourceconf"), eosio::contract("eosio.system")]] resource_config_state
    {
       bool paused;
@@ -26,7 +13,8 @@ namespace eosiosystem {
       uint64_t allocated_cpu = 0;
       uint64_t allocated_net = 0;
       float allocated_total = 0.0;
-      float unetpay = 0.0;
+      asset utility_net_pay;
+      asset utility_cpu_pay;
       bool locked = false;
    };
 
@@ -40,9 +28,10 @@ namespace eosiosystem {
    {
       uint64_t id;
       uint32_t daycount;
-      asset total_locked_tokens;
       uint64_t total_cpu_us;
       uint64_t total_net_words;
+      float net_percent_total;
+      float cpu_percent_total;
       float use_cpu;
       float use_net;
       float ma_cpu;
@@ -51,13 +40,11 @@ namespace eosiosystem {
       float ema_net;
       float utility_daily;
       float bppay_daily;
-      float locking_daily;
       float inflation_daily;
       float inflation;
-      asset issue_amount;
       asset utility_tokens;
       asset bppay_tokens;
-      asset locking_tokens;
+      asset net_tokens;
       time_point_sec timestamp;
       uint64_t primary_key() const { return (id); }
    };
@@ -65,7 +52,7 @@ namespace eosiosystem {
    struct [[eosio::table, eosio::contract("eosio.system")]] account_pay
    {
       name account; //Worbli account consuming the resource
-      float payout; //WBI asset to pay for this period
+      asset payout; //WBI asset to pay for this period
       time_point_sec timestamp;
       uint64_t primary_key() const { return (account.value); }
    };

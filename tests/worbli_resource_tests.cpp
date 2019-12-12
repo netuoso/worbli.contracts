@@ -106,9 +106,10 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), init_resource( "2019-09-18T23:59:59" ) );
    BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00", "2019-09-18T23:59:59"));
 
-   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
-   BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user1", 800000, 246208, "2019-09-19T23:59:59") );
-   BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user2", 172000000, 113000000, "2019-09-19T23:59:59") );
+   //BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 56623104, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user1", 800000, 28311552, "2019-09-19T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user2", 172000000, 28311552, "2019-09-19T23:59:59") );
 
    // this should fail as we are over subscribed
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "net allocation greater than 100%" ),
@@ -116,6 +117,10 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "cpu allocation greater than 100%" ),
       adddistrib("worbli.admin", "user3", 1, 0, "2019-09-19T23:59:59") );
+
+   //std::cout << get_resource_config() << std::endl;
+   //std::cout << get_system_usage(1) << std::endl;
+
 
 } FC_LOG_AND_RETHROW()
 
