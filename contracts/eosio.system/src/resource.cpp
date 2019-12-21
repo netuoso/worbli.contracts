@@ -49,6 +49,9 @@ namespace eosiosystem {
         float net_percent_total = usage_net / (usage_net + usage_cpu);
         float cpu_percent_total = usage_cpu / (usage_net + usage_cpu);
 
+         print(" :: system_max_net: ");
+         print(std::to_string(system_max_net));
+
          print(" :: system_max_cpu: ");
          print(std::to_string(system_max_cpu));
 
@@ -194,6 +197,28 @@ namespace eosiosystem {
         _resource_config_state.allocated_total = 0.0;
         _resource_config_state.utility_net_pay = asset( 0, core_symbol() );
         _resource_config_state.utility_cpu_pay = asset( 0, core_symbol() );
+
+        debug_table d_t(get_self(), get_self().value);
+        d_t.emplace(get_self(), [&](auto &d) {
+            d.id = pk;
+            d.timestamp = timestamp;
+            d.total_cpu_us = total_cpu_us;
+            d.total_net_words = total_net_words;
+            d.usage_cpu = usage_cpu;
+            d.usage_net = usage_net;
+            d.net_percent_total = net_percent_total;
+            d.cpu_percent_total = cpu_percent_total;
+            d.ma_cpu = UTIL_CPU_MA;
+            d.ma_net = UTIL_NET_MA;
+            d.ema_cpu = UTIL_CPU_EMA;
+            d.ema_net = UTIL_NET_EMA;
+            d.inflation = inflation;
+            d.inflation_daily = Daily_i_U;
+            d.utility_daily = utility_daily;
+            d.cpu_utility_daily = cpu_daily;
+            d.net_utility_daily = net_daily;
+            d.bppay_daily = bppay_daily;
+        });
 
     }
 
