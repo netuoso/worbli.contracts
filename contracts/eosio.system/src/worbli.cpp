@@ -93,6 +93,7 @@ namespace eosiosystem {
       const auto& prod = _producers.get( producer.value, "producer not found" );
       _producers.modify( prod, same_payer, [&]( producer_info& info ){
          info.producer_key = eosio::public_key();
+         info.unpaid_blocks = 0;
       });
    }
 
@@ -174,6 +175,7 @@ namespace eosiosystem {
 
       _producers.modify( prod, same_payer, [&]( auto& p ) {
             p.deactivate();
+            p.unpaid_blocks = 0;
       });
    }
 

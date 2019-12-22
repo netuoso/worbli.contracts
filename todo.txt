@@ -14,25 +14,3 @@ Daily CPU Capacity (us): 200000 * 2 * 60 * 60 * 24 = 34560000000
 
 8-byte words
 
-# producer_info table reversion
-- add total_votes = 0;
-- rename:
-    uint64_t              produced_blocks = 0;
-    uint32_t              unpaid_blocks = 0;
-+ double   by_votes()const    { return is_active ? -total_votes : total_votes;  }
-+ remove by_location index
-
-### revised registration workflow
-- addprod --- reserve and primary (worbli)
-   - insert into producers table
-   - set active = N
-- promote to active (worbli, prerequisite=add to producers)
-   - set active = Y
-- regprod (producer, prerequisite= active=Y)
-   - set key, URL, location 
-- unregprod (producer)
-   - unset key
-- demote from active (worbli)
-   - unset key, set active=N
-- remove producer (worbli)
-   - delete from produce

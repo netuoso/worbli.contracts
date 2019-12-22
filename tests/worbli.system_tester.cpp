@@ -193,6 +193,11 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "exchange_state", data, abi_serializer_max_time );
    }
 
+   fc::variant get_producer_info( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(producers), act );
+      return abi_ser.binary_to_variant( "producer_info", data, abi_serializer_max_time );
+   }
+
    action_result create( account_name issuer,
                 asset        maximum_supply ) {
 
@@ -363,7 +368,13 @@ public:
    }
 
    action_result addprod( const account_name producer ) {
-      return push_system_action( N(worbli.admin), N(addproducer), mvo()
+      return push_system_action( N(worbli.admin), N(addprod), mvo()
+           ("producer", producer)
+      );
+   }
+
+   action_result promoteprod( const account_name producer ) {
+      return push_system_action( N(worbli.admin), N(promoteprod), mvo()
            ("producer", producer)
       );
    }
@@ -379,6 +390,12 @@ public:
 
    action_result unregprod( const account_name producer ) {
       return push_system_action( producer, N(unregprod), mvo()
+           ("producer", producer)
+      );
+   }
+
+   action_result demoteprod( const account_name producer ) {
+      return push_system_action( N(worbli.admin), N(demoteprod), mvo()
            ("producer", producer)
       );
    }
@@ -581,7 +598,77 @@ BOOST_FIXTURE_TEST_CASE( test_new_account, worbli_system_tester ) try {
    create_account_with_resources(N(parent4), N(eosio));
    create_account_with_resources(N(parent5), N(eosio));
 
+} FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( producer_tests, worbli_system_tester ) try {
+   vector<account_name> producers = {  N(producer1), N(producer2), N(producer3), N(producer4), N(producer5) };
+   vector<account_name> reserves =  { N(reserve1), N(reserve2), N(reserve3) };
+
+   // create active producers
+   create_accounts_with_resources( producers, N(worbli.admin) );
+   // create reserves
+   create_accounts_with_resources( reserves, N(worbli.admin) );
+
+   for( auto r : reserves ) {
+      BOOST_REQUIRE_EQUAL( success(), addprod(r));
+      BOOST_REQUIRE_EQUAL(wasm_assert_msg("account is not an active producer"), regprod(r));
+   }
+
+   for( auto p : producers ) {
+      BOOST_REQUIRE_EQUAL( success(), addprod(p));
+      BOOST_REQUIRE_EQUAL( success(), promoteprod(p));
+      BOOST_REQUIRE_EQUAL( success(), regprod(p));
+   }
+
+   // make sure regprod is idempotent
+   BOOST_REQUIRE_EQUAL( success(), regprod(N(producer1)));
+
+   BOOST_REQUIRE_EQUAL( success(), activate());
+
+   // produce blocks for 12 rounds
+   produce_blocks( 12 * 5 * 12 );
+
+   for( auto p : producers ) {
+      auto info = get_producer_info(p);
+      BOOST_REQUIRE_EQUAL( 1, info["unpaid_blocks"].as<uint32_t>() );
+   }
+
+   // test unregprod
+   BOOST_REQUIRE_EQUAL( success(), unregprod(N(producer1)));
+   // produce blocks for 12 rounds
+   produce_blocks( 12 * 5 * 12 );
+   {
+      auto info = get_producer_info(N(producer1));
+      BOOST_REQUIRE_EQUAL( 0, info["unpaid_blocks"].as<uint32_t>() );
+   }
+
+   create_account_with_resources( N(producer11), N(worbli.admin) );
+
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("producer has not been registered yet"), promoteprod(N(producer11)));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("account is not registered as a producer"), regprod(N(producer11)));
+
+   BOOST_REQUIRE_EQUAL( success(), addprod(N(producer11)));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("account is not an active producer"), regprod(N(producer11)));
+   BOOST_REQUIRE_EQUAL( success(), promoteprod(N(producer11)));
+   BOOST_REQUIRE_EQUAL( success(), regprod(N(producer11)));
+
+   BOOST_REQUIRE_EQUAL( success(), regprod(N(producer1)));
+
+   produce_blocks( 12 * 5 * 12 );
+
+   {
+      auto info = get_producer_info(N(producer11));
+      BOOST_REQUIRE_EQUAL( 1, info["unpaid_blocks"].as<uint32_t>() );
+
+      info = get_producer_info(N(producer1));
+      BOOST_REQUIRE_EQUAL( 1, info["unpaid_blocks"].as<uint32_t>() );
+   }
+
+   BOOST_REQUIRE_EQUAL( success(), demoteprod(N(producer1)));
+   produce_blocks( 12 * 5 * 12 );
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("account is not an active producer"), regprod(N(producer1)));
+
+   BOOST_REQUIRE_EQUAL( success(), rmvproducer(N(producer1)));
 
 } FC_LOG_AND_RETHROW()
 
