@@ -1,2 +1,38 @@
-- finish WTP
-- inregrate resource code on new branch
+- unittests
+- document testing
+- organize tables
+- voting
+
+
+Resource Notes:
+
+Max net per block: 1048576 bytes = 1M
+Max cpu per block: 200 us 
+
+Daily Net Capacity (bytes): 1048576 * 2 * 60 * 60 * 24 = 22649241600 words
+Daily CPU Capacity (us): 200000 * 2 * 60 * 60 * 24 = 34560000000
+
+8-byte words
+
+# producer_info table reversion
+- add total_votes = 0;
+- rename:
+    uint64_t              produced_blocks = 0;
+    uint32_t              unpaid_blocks = 0;
++ double   by_votes()const    { return is_active ? -total_votes : total_votes;  }
++ remove by_location index
+
+### revised registration workflow
+- addprod --- reserve and primary (worbli)
+   - insert into producers table
+   - set active = N
+- promote to active (worbli, prerequisite=add to producers)
+   - set active = Y
+- regprod (producer, prerequisite= active=Y)
+   - set key, URL, location 
+- unregprod (producer)
+   - unset key
+- demote from active (worbli)
+   - unset key, set active=N
+- remove producer (worbli)
+   - delete from produce

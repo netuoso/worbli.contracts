@@ -199,27 +199,24 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 **/
-   /**
-    * Defines `producer_info` structure to be stored in `producer_info` table, added after version 1.0
-    */
+   // Defines `producer_info` structure to be stored in `producer_info` table, added after version 1.0
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                  owner;
-      //double                total_votes = 0;
+      double                total_votes = 0;
       eosio::public_key     producer_key; /// a packed public key object
       bool                  is_active = true;
       std::string           url;
-      uint64_t              produced_blocks = 0;
+      uint32_t              unpaid_blocks = 0;
       time_point            last_claim_time;
       uint16_t              location = 0;
-
       uint64_t primary_key()const { return owner.value;                             }
-      double   by_location()const { return (double)location;                        }
+      double   by_votes()const    { return is_active ? -total_votes : total_votes;  }
       bool     active()const      { return is_active;                               }
       void     deactivate()       { producer_key = public_key(); is_active = false; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info, (owner)(producer_key)(is_active)(url)
-                        (produced_blocks)(last_claim_time)(location) )
+      EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
+                        (unpaid_blocks)(last_claim_time)(location) )
    };
 
    /**
@@ -294,8 +291,8 @@ namespace eosiosystem {
     * Defines producer info table added in version 1.0
     */
    typedef eosio::multi_index< "producers"_n, producer_info,
-                               indexed_by<"prolocation"_n, const_mem_fun<producer_info, double, &producer_info::by_location>  >   
-                               > producers_table;
+                               indexed_by<"prototalvote"_n, const_mem_fun<producer_info, double, &producer_info::by_votes>  >
+                             > producers_table;
 
    /**
     * Defines new producer info table added in version 1.3.0
@@ -1252,7 +1249,13 @@ namespace eosiosystem {
                           int64_t bytes );
 
          [[eosio::action]]
-         void addproducer( const name producer );
+         void addprod( const name producer );
+
+         [[eosio::action]]
+         void promoteprod( const name producer );
+
+         [[eosio::action]]
+         void demoteprod( const name producer );
 
          [[eosio::action]]
          void togglesched( bool is_active );

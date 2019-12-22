@@ -722,7 +722,8 @@ BOOST_FIXTURE_TEST_CASE( producer_register_unregister, eosio_system_tester ) try
 
    //fc::variant params = producer_parameters_example(1);
    auto key =  fc::crypto::public_key( std::string("EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV") );
-   BOOST_REQUIRE_EQUAL( success(),push_action(N(worbli.admin), N(addproducer), mvo()("producer",  "alice1111111")));
+   BOOST_REQUIRE_EQUAL( success(),push_action(N(worbli.admin), N(addprod), mvo()("producer",  "alice1111111")));
+   BOOST_REQUIRE_EQUAL( success(),push_action(N(worbli.admin), N(promoteprod), mvo()("producer",  "alice1111111")));
    BOOST_REQUIRE_EQUAL( success(), push_action(N(alice1111111), N(regproducer), mvo()
                                                ("producer",  "alice1111111")
                                                ("producer_key", key )
@@ -2302,14 +2303,12 @@ BOOST_FIXTURE_TEST_CASE(producer_onblock_check, eosio_system_tester) try {
    for (auto a:producer_names)
       BOOST_REQUIRE_EQUAL( success(), regproducer(a) );
 
-
-
    // produce for 1 hour
    {
       produce_block(fc::seconds(3600));
       bool all_21_produced = true;
       for (uint32_t i = 0; i < 21; ++i) {
-         if (0 == get_producer_info(producer_names[i])["produced_blocks"].as<uint32_t>()) {
+         if (0 == get_producer_info(producer_names[i])["unpaid_blocks"].as<uint32_t>()) {
             all_21_produced= false;
          }
       }
@@ -2845,7 +2844,7 @@ BOOST_FIXTURE_TEST_CASE( vote_producers_in_and_out, eosio_system_tester ) try {
       produce_blocks(producer_names.size() * 12 + 120);
       bool all_21_produced = true;
       for (uint32_t i = 0; i < producer_names.size(); ++i) {
-         if (0 == get_producer_info(producer_names[i])["produced_blocks"].as<uint32_t>()) {
+         if (0 == get_producer_info(producer_names[i])["unpaid_blocks"].as<uint32_t>()) {
             all_21_produced = false;
          }
       }
@@ -4832,7 +4831,7 @@ BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
       ("owner", "eosio")
       ("net_weight", core_sym::from_string("0.0000"))
       ("cpu_weight", core_sym::from_string("0.0000"))
-      ("ram_stake", core_sym::from_string("36575.3823"))
+      ("ram_stake", core_sym::from_string("36869.5735"))
       ("ram_bytes",  total_res["ram_bytes"].as_int64() )
    );
 
