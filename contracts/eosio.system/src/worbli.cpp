@@ -122,6 +122,22 @@ namespace eosiosystem {
       _wstate.max_subaccounts = max_subaccounts;
     }
 
+    void system_contract::cleanup() {
+      require_auth( "worbli.admin"_n );
+      producers_new_table   producers_new( _self, _self.value );
+      for (auto itr = _producers.cbegin(); itr != _producers.cend(); itr++) {
+         producers_new.emplace( itr->owner, [&]( auto& p ) {
+            p.owner = itr->owner;
+            p.producer_key = itr->producer_key;
+            p.is_active = itr->is_active;
+            p.url = itr->url;
+            p.unpaid_blocks = 0;
+            p.last_claim_time = itr->last_claim_time;
+            p.location = itr->location;
+         });
+      }
+    }
+
    // worbli additions
     void native::can_create_subaccount(name creator) {
 
