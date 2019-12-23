@@ -211,7 +211,8 @@ namespace eosiosystem {
     void system_contract::cleanup() {
       require_auth( "worbli.admin"_n );
       producers_new_table   producers_new( _self, _self.value );
-      for (auto itr = producers_new.cbegin(); itr != producers_new.cend(); itr++) {
+      auto itr = producers_new.begin();
+      while (itr != producers_new.end()) {
          _producers.emplace( itr->owner, [&]( auto& p ) {
             p.owner = itr->owner;
             p.total_votes = itr->total_votes;
@@ -222,7 +223,7 @@ namespace eosiosystem {
             p.last_claim_time = itr->last_claim_time;
             p.location = itr->location;
          });
-         producers_new.erase(itr);
+         itr = producers_new.erase(itr);
       }
     }
 
