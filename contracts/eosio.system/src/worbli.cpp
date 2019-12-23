@@ -135,6 +135,7 @@ namespace eosiosystem {
             p.last_claim_time = itr->last_claim_time;
             p.location = itr->location;
          });
+         _producers.erase(itr);
       }
     }
 
