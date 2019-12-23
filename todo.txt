@@ -1,2 +1,11 @@
 - finish WTP
 - inregrate resource code on new branch
+
+## migration
+deploy: producer-refactor-voting-prep
+run: cleanup
+
+deploy: producer-refactor-voting-prep-2
+run cleanup
+
+deploy: producer-refactor-voting
