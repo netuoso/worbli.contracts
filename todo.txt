@@ -5,11 +5,8 @@ run: cleanup
 deploy: producer-refactor-voting-prep-2
 run cleanup
 
-deploy: producer-refactor-voting
-- unittests
-- document testing
-- organize tables
-- voting
+deploy: worbli-v1.7.0.3
+
 
 
 Resource Notes:
