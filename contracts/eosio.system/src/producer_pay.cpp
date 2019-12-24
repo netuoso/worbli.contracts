@@ -32,8 +32,11 @@ namespace eosiosystem {
 
       auto prod = _producers.find( producer.value );
       if ( prod != _producers.end() ) {
+         //_gstate.total_unpaid_blocks++;
          _producers.modify( prod, same_payer, [&](auto& p ) {
-               p.produced_blocks++;
+            if( p.producer_key != eosio::public_key() ) {
+               p.unpaid_blocks = 1;
+            }
          });
       }
 

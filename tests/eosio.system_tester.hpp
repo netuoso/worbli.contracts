@@ -695,9 +695,14 @@ public:
    }
 
    action_result regproducer( const account_name& acnt, int params_fixture = 1 ) {
-      action_result r =  push_action( N(worbli.admin), N(addproducer), mvo()
+      action_result r =  push_action( N(worbli.admin), N(addprod), mvo()
                           ("producer",  acnt )
       );
+
+      r =  push_action( N(worbli.admin), N(promoteprod), mvo()
+                          ("producer",  acnt )
+      );
+
       BOOST_REQUIRE_EQUAL( success(), r);
       r = push_action( acnt, N(regproducer), mvo()
                           ("producer",  acnt )
