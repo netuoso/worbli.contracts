@@ -1,11 +1,11 @@
 ## migration
-deploy: producer-refactor-voting-prep
+deploy: worbli-v1.7.1
 run: cleanup
 
-deploy: producer-refactor-voting-prep-2
+deploy: worbli-v1.7.2
 run cleanup
 
-deploy: worbli-v1.7.0.3
+deploy: worbli-v1.7.3
 
 
 
