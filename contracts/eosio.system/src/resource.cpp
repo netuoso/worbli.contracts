@@ -43,8 +43,16 @@ namespace eosiosystem {
         uint64_t system_max_cpu = static_cast<uint64_t>(_gstate.max_block_cpu_usage) * 2 * 60 * 60 * 24;
         float usage_cpu = static_cast<float>(total_cpu_us) / system_max_cpu;
 
+        if(usage_cpu < 0.01) {
+            usage_cpu = 0.01;
+        }
+
         uint64_t system_max_net = static_cast<uint64_t>(_gstate.max_block_net_usage) * 2 * 60 * 60 * 24;
         float usage_net = static_cast<float>(total_net_words * 8) / system_max_net;
+
+        if(usage_net < 0.01) {
+            usage_net = 0.01;
+        }
 
         float net_percent_total = usage_net / (usage_net + usage_cpu);
         float cpu_percent_total = usage_cpu / (usage_net + usage_cpu);
@@ -99,7 +107,15 @@ namespace eosiosystem {
             UTIL_CPU_EMA = UTIL_CPU_MA;
             UTIL_NET_EMA = UTIL_NET_MA;
         }
-        float UTIL_TOTAL_EMA = UTIL_CPU_EMA + UTIL_NET_EMA;
+        float UTIL_TOTAL_EMA = (UTIL_CPU_EMA + UTIL_NET_EMA) / 2;
+
+        if(UTIL_TOTAL_EMA < 0.01) {
+            UTIL_TOTAL_EMA = 0.01;
+        }
+
+        if(UTIL_TOTAL_EMA == 1.0) {
+            UTIL_TOTAL_EMA = 0.99;
+        }
 
         float inflation = (1 - UTIL_TOTAL_EMA) / (1 - UTIL_TOTAL_EMA - worbli::get_c(UTIL_TOTAL_EMA) * VT) - 1;
 
@@ -179,6 +195,7 @@ namespace eosiosystem {
             h.ma_net = UTIL_NET_MA;
             h.ema_cpu = UTIL_CPU_EMA;
             h.ema_net = UTIL_NET_EMA;
+            h.ema_util_total = UTIL_TOTAL_EMA;
             h.utility_daily = utility_daily;
             h.bppay_daily = bppay_daily;
             h.inflation = inflation;

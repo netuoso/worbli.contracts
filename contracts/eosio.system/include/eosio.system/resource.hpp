@@ -38,6 +38,7 @@ namespace eosiosystem {
       float ma_net;
       float ema_cpu;
       float ema_net;
+      float ema_util_total;
       float utility_daily;
       float bppay_daily;
       float inflation_daily;
