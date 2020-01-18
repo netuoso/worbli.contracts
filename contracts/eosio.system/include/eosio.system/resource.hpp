@@ -13,7 +13,6 @@ namespace eosiosystem {
       uint64_t allocated_cpu = 0;
       uint64_t allocated_net = 0;
       float allocated_total = 0.0;
-      asset utility_net_pay;
       asset utility_cpu_pay;
       bool locked = false;
    };

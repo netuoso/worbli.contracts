@@ -113,13 +113,37 @@ BOOST_FIXTURE_TEST_CASE( test_resource_oracle, worbli_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( success(), 
       settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2020-01-01T23:59:59") );
+   
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2020-01-01T23:59:59") );
 
- /**
- * - negative usage
- * - greater than max usage
- * - ablility to redo metric entry
- *
- **/
+
+   produce_block( fc::days(1) );
+   produce_blocks( 2 );
+
+   // test max usage
+   BOOST_REQUIRE_EQUAL( success(), 
+      settotal("worbli.admin", 34560000000, 22649241600, core_sym::from_string("0.0000"), "2020-01-02T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2020-01-02T23:59:59") );
+
+
+   produce_block( fc::days(1) );
+   produce_blocks( 2 );
+
+   // test over max cpu usage
+   BOOST_REQUIRE_EQUAL( success(), 
+      settotal("worbli.admin", 34560000001, 22649241601, core_sym::from_string("0.0000"), "2020-01-03T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2020-01-03T23:59:59") );
+   
+
+   produce_block( fc::days(1) );
+   produce_blocks( 2 );
+
+   // test over max net usage
+   BOOST_REQUIRE_EQUAL( success(), 
+      settotal("worbli.admin", 34560000000, 22649241601, core_sym::from_string("0.0000"), "2020-01-04T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2020-01-04T23:59:59") );
+
+   //std::cout << get_global_state() << std::endl;
 
 } FC_LOG_AND_RETHROW()
 
@@ -140,11 +164,8 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), init_resource( "2019-09-18T23:59:59" ) );
    BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00"));
 
-   //BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 56623104, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
    BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user1", 800000, 28311552, "2019-09-19T23:59:59") );
-   
-   std::cout << get_resource_config() << std::endl;
    
    // should fail on duplicate
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "duplicate distribution" ),
@@ -152,7 +173,6 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    
    BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user2", 172000000, 28311552, "2019-09-19T23:59:59") );
 
-   std::cout << get_resource_config() << std::endl;
    // this should fail as we are over subscribed
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "net allocation greater than 100%" ),
       adddistrib("worbli.admin", "user3", 0, 1, "2019-09-19T23:59:59") );
@@ -162,19 +182,20 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-19T23:59:59") );
 
-   //BOOST_REQUIRE_EQUAL( success(), claimdistrib("user1") );
-   //BOOST_REQUIRE_EQUAL( success(), claimdistrib("user2") );
+   auto user1_pay = get_accountpay(N(user1))["payout"].as<asset>();
+   auto user2_pay = get_accountpay(N(user2))["payout"].as<asset>();
 
-   std::cout << get_accountpay(N(user1)) << std::endl;
-   std::cout << get_accountpay(N(user2)) << std::endl;
-   std::cout << get_balance("eosio.ppay") << std::endl;
-   std::cout << get_balance("eosio.usage") << std::endl;
+   BOOST_REQUIRE_EQUAL( success(), claimdistrib("user1") );
+   BOOST_REQUIRE_EQUAL( success(), claimdistrib("user2") );
+
+   BOOST_REQUIRE_EQUAL( user1_pay == get_balance("user1"), true );
+   BOOST_REQUIRE_EQUAL( user2_pay == get_balance("user2"), true );
+
+   // calculate manually and make sure numbers line up.
+
    std::cout << get_system_usage(1) << std::endl;
 
-   // test payouts
-   // test when numbers line up exactly
    // test overage in usage
-   // test activation
    // make sure both models don't collide
 
 

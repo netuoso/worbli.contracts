@@ -4,14 +4,14 @@
 
 namespace eosiosystem {
 
+    // TODO look into better way to handle words and bytes
     ACTION system_contract::settotal(name source, uint64_t total_cpu_us, uint64_t total_net_words, time_point_sec timestamp)
     {
         require_auth(source);
         check(is_source(source) == true, "not authorized to execute this action");
         check(!_resource_config_state.locked, "prior collection period is still open");
-
-        print(" :: total_cpu_us: ");
-        print(std::to_string(total_cpu_us));
+        check(total_cpu_us > 0, "cpu measurement must be greater than 0");
+        check(total_net_words > 0, "net measurement must be greater than 0");
 
         system_usage_table u_t(get_self(), get_self().value);
         auto itr = u_t.end();
@@ -41,6 +41,7 @@ namespace eosiosystem {
         * Turn utility readings into ratios
         **/
         uint64_t system_max_cpu = static_cast<uint64_t>(_gstate.max_block_cpu_usage) * 2 * 60 * 60 * 24;
+        check( total_cpu_us <= system_max_cpu, "measured cpu usage is greater than system total");
         float usage_cpu = static_cast<float>(total_cpu_us) / system_max_cpu;
 
         if(usage_cpu < 0.01) {
@@ -48,6 +49,7 @@ namespace eosiosystem {
         }
 
         uint64_t system_max_net = static_cast<uint64_t>(_gstate.max_block_net_usage) * 2 * 60 * 60 * 24;
+        check( total_net_words * 8 <= system_max_net, "measured net usage is greater than system total");
         float usage_net = static_cast<float>(total_net_words * 8) / system_max_net;
 
         if(usage_net < 0.01) {
@@ -214,7 +216,6 @@ namespace eosiosystem {
         _resource_config_state.allocated_cpu = 0.0;
         _resource_config_state.allocated_net = 0.0;
         _resource_config_state.allocated_total = 0.0;
-        _resource_config_state.utility_net_pay = asset( 0, core_symbol() );
         _resource_config_state.utility_cpu_pay = asset( 0, core_symbol() );
 
     }
@@ -309,11 +310,8 @@ namespace eosiosystem {
         _resource_config_state.allocated_cpu += user_cpu_us;
         _resource_config_state.allocated_net += user_net_words;
         
-        auto utility_net_pay = net_percentage * itr_u->net_percent_total * itr_u->utility_tokens.amount;
-        _resource_config_state.utility_net_pay += asset( utility_net_pay, core_symbol() );
-
         // utility_daily is a percentage
-        auto add_claim = cpu_percentage * itr_u->cpu_percent_total * itr_u->utility_tokens.amount;
+        auto add_claim = cpu_percentage * itr_u->utility_tokens.amount;
         asset payout = asset( add_claim, core_symbol() );
         _resource_config_state.utility_cpu_pay += payout;
 
@@ -348,10 +346,9 @@ namespace eosiosystem {
         bool resource_active = feature_itr == _features.end() ? false : feature_itr->active;
         if(resource_active)
         {
-            token::transfer_action transfer_act{token_account, {{ppay_account, active_permission}, {account, active_permission}}};
-            transfer_act.send(ppay_account, account, itr->payout, "producer pay");
+            token::transfer_action transfer_act{token_account, {{usage_account, active_permission}, {account, active_permission}}};
+            transfer_act.send(usage_account, account, itr->payout, "utility reward");
         }
-
         itr = a_t.erase(itr);
     }
 
