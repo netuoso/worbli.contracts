@@ -232,8 +232,10 @@ namespace eosiosystem {
         itr_u--;
 
         check(itr_u->timestamp == timestamp, "timestamp is not correct, collecting stats for: " + std::to_string(timestamp.sec_since_epoch()));
-
-        {
+        auto feature_itr = _features.find("resource"_n.value);
+        bool resource_active = feature_itr == _features.end() ? false : feature_itr->active;
+        if(resource_active) {
+         {
             token::issue_action issue_act{token_account, {{get_self(), active_permission}}};
             issue_act.send(get_self(), itr_u->bppay_tokens + itr_u->utility_tokens, "issue daily inflation");
          }
@@ -274,6 +276,7 @@ namespace eosiosystem {
                });
             }
          }
+        }
 
         _resource_config_state.locked = false; 
         _wgstate.last_inflation_print = timestamp;
@@ -333,7 +336,6 @@ namespace eosiosystem {
 
     ACTION system_contract::claimdistrib(name account)
     {
-
         require_auth(account);
         check(!_resource_config_state.locked, "cannot claim while inflation calculation is running");
 
@@ -342,14 +344,15 @@ namespace eosiosystem {
         check(itr != a_t.end(), "account not found");
         check(itr->payout != asset( 0, core_symbol() ), "zero balance to claim");
 
-        // transfer payout
+        auto feature_itr = _features.find("resource"_n.value);
+        bool resource_active = feature_itr == _features.end() ? false : feature_itr->active;
+        if(resource_active)
         {
             token::transfer_action transfer_act{token_account, {{ppay_account, active_permission}, {account, active_permission}}};
             transfer_act.send(ppay_account, account, itr->payout, "producer pay");
         }
 
         itr = a_t.erase(itr);
-
     }
 
     ACTION system_contract::updconfig(bool paused, uint32_t emadraglimit)
@@ -404,18 +407,31 @@ namespace eosiosystem {
         });
     }
 
+    ACTION system_contract::activatefeat(name feature) {
+        require_auth(get_self());
+        feature_toggle_table f_t(get_self(), get_self().value);
+
+        auto itr = f_t.find(feature.value);
+        check(itr == f_t.end(), "feature already active");
+
+        f_t.emplace(get_self(), [&](auto &f) {
+            f.feature = feature;
+            f.active = true;
+        });
+    }
+
     bool system_contract::is_source(name source)
     {
         sourceauth_table s_t(get_self(), get_self().value);
         auto itr = s_t.find(source.value);
         if (itr == s_t.end())
         {
-        return false;
+            return false;
         }
         else
         {
-        return true;
+            return true;
         }
-    }    
+    }
 
 }

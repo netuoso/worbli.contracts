@@ -46,10 +46,9 @@ void system_contract::onblock(ignore<block_header>)
       update_elected_producers(timestamp);
    }
 
-   if ( _wgstate.last_inflation_print != time_point_sec(0) ) { // new resource model
-
-   }
-   else
+   auto feature_itr = _features.find("resource"_n.value);
+   bool resource_active = feature_itr == _features.end() ? false : feature_itr->active;
+   if(!resource_active)
    { // legacy inflation model
 
       /// only distribute inflation once a day

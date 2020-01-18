@@ -562,6 +562,7 @@ namespace eosiosystem {
          worbli_global_state     _wgstate;
          resource_config_singleton _resource_config;
          resource_config_state     _resource_config_state;
+         feature_toggle_table      _features;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -1264,7 +1265,7 @@ namespace eosiosystem {
          void setwparams(uint64_t max_subaccounts);
 
          [[eosio::action]]
-         void setwgstate(time_point_sec last_inflation_print, time_point_sec last_metric_read);
+         void setwgstate(time_point_sec last_inflation_print );
 
          [[eosio::action]]
          void initresource(time_point_sec start);
@@ -1278,6 +1279,7 @@ namespace eosiosystem {
          // resource CONFIGURATION functions
          ACTION updconfig(bool paused, uint32_t emadraglimit);
          ACTION addupdsource(name account, uint8_t in_out);
+         ACTION activatefeat(name feature);
 
          // resource helper functions
          bool is_source(name source);

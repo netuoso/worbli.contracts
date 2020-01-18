@@ -27,7 +27,8 @@ namespace eosiosystem {
     _producer_pay(get_self(), get_self().value),
     _worbli_params(get_self(), get_self().value),
     _wglobal(get_self(), get_self().value),
-    _resource_config(get_self(), get_self().value)
+    _resource_config(get_self(), get_self().value),
+    _features(get_self(), get_self().value)
    {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();

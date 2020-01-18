@@ -416,10 +416,9 @@ public:
       );
    }
 
-   action_result setwgstate( string last_inflation_print, string last_metric_read ) {
+   action_result setwgstate( string last_inflation_print ) {
       return push_system_action( config::system_account_name, N(setwgstate), mvo()
            ( "last_inflation_print", last_inflation_print )
-           ( "last_metric_read", last_metric_read )
       );
    }
 
@@ -451,6 +450,18 @@ public:
       return push_system_action( N(worbli.admin), N(commitusage), mvo()
            ( "source", source )
            ( "timestamp", timestamp )
+      );
+   }
+
+   action_result activatefeature(name feature) {
+      return push_system_action( config::system_account_name, N(activatefeat), mvo()
+           ( "feature", feature )
+      );
+   }
+
+   action_result claimdistrib(name account) {
+      return push_system_action( account, N(claimdistrib), mvo()
+           ( "account", account )
       );
    }
 

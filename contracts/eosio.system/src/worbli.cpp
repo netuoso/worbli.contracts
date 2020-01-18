@@ -123,10 +123,9 @@ namespace eosiosystem {
       _worbli_params_state.max_subaccounts = max_subaccounts;
     }
 
-   void system_contract::setwgstate(time_point_sec last_inflation_print, time_point_sec last_metric_read) {
+   void system_contract::setwgstate(time_point_sec last_inflation_print) {
       require_auth( _self );
       _wgstate.last_inflation_print = last_inflation_print;
-      _wgstate.last_metric_read = last_metric_read;
    }
 
     void native::can_create_subaccount(name creator) {

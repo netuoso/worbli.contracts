@@ -60,10 +60,19 @@ namespace eosiosystem {
       uint64_t primary_key() const { return (account.value); }
    };
 
+   struct [[eosio::table, eosio::contract("eosio.system")]] feature_toggle
+   {
+      name feature;
+      bool active = false;
+      uint64_t primary_key() const { return (feature.value); }
+   };
+
+
    typedef eosio::multi_index<"systemusage"_n, system_usage> system_usage_table;
    typedef eosio::singleton<"resourceconf"_n, resource_config_state> resource_config_singleton;
    typedef eosio::multi_index<"sourceauths"_n, sourceauth> sourceauth_table;
    typedef eosio::multi_index<"accountpay"_n, account_pay> account_pay_table;
+   typedef eosio::multi_index<"feattoggle"_n, feature_toggle> feature_toggle_table;
 }
 
 namespace worbli {

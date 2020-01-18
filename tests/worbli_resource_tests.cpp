@@ -7,7 +7,8 @@ BOOST_FIXTURE_TEST_CASE( test_average_calculations, worbli_system_tester, * boos
    BOOST_REQUIRE_EQUAL( success(), addprod( N(producer) ));
    BOOST_REQUIRE_EQUAL( success(), regprod( N(producer) ));
    activate();
-
+   BOOST_REQUIRE_EQUAL( success(), activatefeature("resource"));
+   
    // start date is January 1, 2020 12:00:00 AM
    // 1577836869
 
@@ -15,7 +16,7 @@ BOOST_FIXTURE_TEST_CASE( test_average_calculations, worbli_system_tester, * boos
     * start metric collection and inflation
     * collect metrics from Dec 29 2019 to current day (Jan 1 2020)
     **/
-   BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00", "2019-09-18T23:59:59"));
+   BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00"));
    produce_block( fc::days(1) );
 
    BOOST_REQUIRE_EQUAL( success(), addupdsource( N(worbli.admin), 1 ) );
@@ -78,6 +79,7 @@ BOOST_FIXTURE_TEST_CASE( test_resource_oracle, worbli_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), addprod( N(producer) ));
    BOOST_REQUIRE_EQUAL( success(), regprod( N(producer) ));
    activate();
+   BOOST_REQUIRE_EQUAL( success(), activatefeature("resource"));
 
    // start date is January 1, 2020 12:00:54 AM
 
@@ -85,7 +87,7 @@ BOOST_FIXTURE_TEST_CASE( test_resource_oracle, worbli_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), updconfig( false, 1 ) );
 
    BOOST_REQUIRE_EQUAL( success(), init_resource( "2019-12-30T23:59:59" ) );
-   BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00", "2019-12-30T23:59:59"));
+   BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00"));
 
    produce_block( fc::days(1) );
    produce_blocks( 2 );
@@ -126,6 +128,7 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), addprod( N(producer) ));
    BOOST_REQUIRE_EQUAL( success(), regprod( N(producer) ));
    activate();
+   BOOST_REQUIRE_EQUAL( success(), activatefeature("resource"));
 
    create_account_with_resources(N(user1), N(worbli.admin));
    create_account_with_resources(N(user2), N(worbli.admin));
@@ -135,11 +138,13 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), updconfig( false, 1 ) );
 
    BOOST_REQUIRE_EQUAL( success(), init_resource( "2019-09-18T23:59:59" ) );
-   BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00", "2019-09-18T23:59:59"));
+   BOOST_REQUIRE_EQUAL( success(),  setwgstate("1970-01-01T00:00:00"));
 
    //BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 56623104, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
    BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user1", 800000, 28311552, "2019-09-19T23:59:59") );
+   
+   std::cout << get_resource_config() << std::endl;
    
    // should fail on duplicate
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "duplicate distribution" ),
@@ -147,6 +152,7 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    
    BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user2", 172000000, 28311552, "2019-09-19T23:59:59") );
 
+   std::cout << get_resource_config() << std::endl;
    // this should fail as we are over subscribed
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "net allocation greater than 100%" ),
       adddistrib("worbli.admin", "user3", 0, 1, "2019-09-19T23:59:59") );
@@ -156,6 +162,9 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-19T23:59:59") );
 
+   //BOOST_REQUIRE_EQUAL( success(), claimdistrib("user1") );
+   //BOOST_REQUIRE_EQUAL( success(), claimdistrib("user2") );
+
    std::cout << get_accountpay(N(user1)) << std::endl;
    std::cout << get_accountpay(N(user2)) << std::endl;
    std::cout << get_balance("eosio.ppay") << std::endl;
@@ -164,6 +173,9 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
 
    // test payouts
    // test when numbers line up exactly
+   // test overage in usage
+   // test activation
+   // make sure both models don't collide
 
 
 } FC_LOG_AND_RETHROW()

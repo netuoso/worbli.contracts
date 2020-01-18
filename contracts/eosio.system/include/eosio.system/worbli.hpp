@@ -49,10 +49,8 @@ namespace eosiosystem {
 
    struct [[eosio::table("wglobal"), eosio::contract("eosio.system")]] worbli_global_state {
       time_point_sec        last_inflation_print = time_point_sec();
-      time_point_sec        last_metric_read = time_point_sec();
-      std::string            message; // Todo: remove after testing
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( worbli_global_state, (last_inflation_print)(last_metric_read)(message) )
+      EOSLIB_SERIALIZE( worbli_global_state, (last_inflation_print) )
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] subaccount {
