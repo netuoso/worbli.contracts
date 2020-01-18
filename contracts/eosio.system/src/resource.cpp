@@ -175,7 +175,7 @@ namespace eosiosystem {
 
         // calculate inflation amount
         auto utility_tokens = static_cast<int64_t>( (cpu_daily * double(token_supply.amount)));
-        auto bppay_tokens = static_cast<int64_t>( ((bppay_daily + cpu_daily) * double(token_supply.amount)));
+        auto bppay_tokens = static_cast<int64_t>( ((bppay_daily) * double(token_supply.amount)));
         auto net_tokens = static_cast<int64_t>( (net_daily * double(token_supply.amount)));
 
         print(" :: utility_tokens: ");
@@ -196,7 +196,9 @@ namespace eosiosystem {
             h.ema_cpu = UTIL_CPU_EMA;
             h.ema_net = UTIL_NET_EMA;
             h.ema_util_total = UTIL_TOTAL_EMA;
+            h.utility = Upaygross;
             h.utility_daily = utility_daily;
+            h.bppay = Bppay;
             h.bppay_daily = bppay_daily;
             h.inflation = inflation;
             h.inflation_daily = Daily_i_U;
@@ -214,28 +216,6 @@ namespace eosiosystem {
         _resource_config_state.allocated_total = 0.0;
         _resource_config_state.utility_net_pay = asset( 0, core_symbol() );
         _resource_config_state.utility_cpu_pay = asset( 0, core_symbol() );
-
-        debug_table d_t(get_self(), get_self().value);
-        d_t.emplace(get_self(), [&](auto &d) {
-            d.id = pk;
-            d.timestamp = timestamp;
-            d.total_cpu_us = total_cpu_us;
-            d.total_net_words = total_net_words;
-            d.usage_cpu = usage_cpu;
-            d.usage_net = usage_net;
-            d.net_percent_total = net_percent_total;
-            d.cpu_percent_total = cpu_percent_total;
-            d.ma_cpu = UTIL_CPU_MA;
-            d.ma_net = UTIL_NET_MA;
-            d.ema_cpu = UTIL_CPU_EMA;
-            d.ema_net = UTIL_NET_EMA;
-            d.inflation = inflation;
-            d.inflation_daily = Daily_i_U;
-            d.utility_daily = utility_daily;
-            d.cpu_utility_daily = cpu_daily;
-            d.net_utility_daily = net_daily;
-            d.bppay_daily = bppay_daily;
-        });
 
     }
 
@@ -363,6 +343,11 @@ namespace eosiosystem {
         check(itr->payout != asset( 0, core_symbol() ), "zero balance to claim");
 
         // transfer payout
+        {
+            token::transfer_action transfer_act{token_account, {{ppay_account, active_permission}, {account, active_permission}}};
+            transfer_act.send(ppay_account, account, itr->payout, "producer pay");
+        }
+
         itr = a_t.erase(itr);
 
     }

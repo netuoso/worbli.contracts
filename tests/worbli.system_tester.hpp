@@ -198,6 +198,11 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "system_usage", data, abi_serializer_max_time );
    }
 
+   fc::variant get_accountpay( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(accountpay), act );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account_pay", data, abi_serializer_max_time );
+   }
+
    fc::variant get_metric(uint64_t index) {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(metrics), name(index) );
       if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
@@ -438,6 +443,13 @@ public:
            ( "total_cpu_us", total_cpu_us )
            ( "total_net_words", total_net_words )
            ( "locked_tokens",  locked_tokens)
+           ( "timestamp", timestamp )
+      );
+   }
+
+   action_result commitusage(name source, string timestamp) {
+      return push_system_action( N(worbli.admin), N(commitusage), mvo()
+           ( "source", source )
            ( "timestamp", timestamp )
       );
    }

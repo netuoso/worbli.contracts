@@ -39,10 +39,12 @@ namespace eosiosystem {
       float ema_cpu;
       float ema_net;
       float ema_util_total;
+      float utility;
       float utility_daily;
+      float bppay;
       float bppay_daily;
-      float inflation_daily;
       float inflation;
+      float inflation_daily;
       asset utility_tokens;
       asset bppay_tokens;
       asset net_tokens;
@@ -58,35 +60,10 @@ namespace eosiosystem {
       uint64_t primary_key() const { return (account.value); }
    };
 
-   struct [[eosio::table, eosio::contract("eosio.system")]] debug
-   {
-      uint64_t id;
-      time_point_sec timestamp;
-      uint64_t total_cpu_us;
-      uint64_t total_net_words;
-      float usage_cpu;
-      float usage_net;
-      float net_percent_total;
-      float cpu_percent_total;
-      float ma_cpu;
-      float ma_net;
-      float ema_cpu;
-      float ema_net;
-      float inflation_daily;
-      float inflation;
-      float utility_daily;
-      float cpu_utility_daily;
-      float net_utility_daily;
-      float bppay_daily;
-      uint64_t primary_key() const { return (id); }
-   };
-   
-
    typedef eosio::multi_index<"systemusage"_n, system_usage> system_usage_table;
    typedef eosio::singleton<"resourceconf"_n, resource_config_state> resource_config_singleton;
    typedef eosio::multi_index<"sourceauths"_n, sourceauth> sourceauth_table;
    typedef eosio::multi_index<"accountpay"_n, account_pay> account_pay_table;
-   typedef eosio::multi_index<"fordaryn"_n, debug> debug_table;
 }
 
 namespace worbli {

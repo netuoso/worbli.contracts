@@ -23,24 +23,36 @@ BOOST_FIXTURE_TEST_CASE( test_average_calculations, worbli_system_tester, * boos
 
    BOOST_REQUIRE_EQUAL( success(), init_resource( "2019-09-18T23:59:59" ) );
 
+   // test averages with 1 period: total usage 1% - 0.5% net, 0.5% cpu
+   // Should default to 1%
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
+
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-19T23:59:59") );
    
-   // test averages with 1 period: total usage 1%
    auto history = get_system_usage(1);
-   BOOST_REQUIRE_EQUAL( "0.00499999988824129", history["ma_cpu"] );
-   BOOST_REQUIRE_EQUAL( "0.00499999988824129", history["ma_net"] );
-   BOOST_REQUIRE_EQUAL( "0.00499999988824129", history["ema_cpu"] );
-   BOOST_REQUIRE_EQUAL( "0.00499999988824129", history["ema_net"] );
+   BOOST_REQUIRE_EQUAL( "0.00999999977648258", history["ma_cpu"] );
+   BOOST_REQUIRE_EQUAL( "0.00999999977648258", history["ma_net"] );
+   BOOST_REQUIRE_EQUAL( "0.00999999977648258", history["ema_cpu"] );
+   BOOST_REQUIRE_EQUAL( "0.00999999977648258", history["ema_net"] );
 
    // test averages with 5 periods: total usage 10%
    BOOST_REQUIRE_EQUAL( success(), updconfig( false, 5 ) );
    produce_blocks( 6 );
 
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-20T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-20T23:59:59") );
+
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-21T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-21T23:59:59") );
+
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-22T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-22T23:59:59") );
+
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-23T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-23T23:59:59") );
+
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 1728000000, 1132462080, core_sym::from_string("0.0000"), "2019-09-24T23:59:59") );
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-24T23:59:59") );
 
    history = get_system_usage(6);
 
@@ -79,7 +91,13 @@ BOOST_FIXTURE_TEST_CASE( test_resource_oracle, worbli_system_tester ) try {
    produce_blocks( 2 );
 
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-12-31T23:59:59") );
-   
+
+   // previous collection period still open
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "prior collection period is still open" ),
+      settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2020-01-01T23:59:59") );
+
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-12-31T23:59:59") );
+
    // future date should fail
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "cannot settotal for future date" ),
       settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2020-01-01T23:59:59") );
@@ -87,6 +105,19 @@ BOOST_FIXTURE_TEST_CASE( test_resource_oracle, worbli_system_tester ) try {
    // past date should fail
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "invalid timestamp" ),
       settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-12-15T23:59:59") );
+
+   produce_block( fc::days(1) );
+   produce_blocks( 2 );
+
+   BOOST_REQUIRE_EQUAL( success(), 
+      settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2020-01-01T23:59:59") );
+
+ /**
+ * - negative usage
+ * - greater than max usage
+ * - ablility to redo metric entry
+ *
+ **/
 
 } FC_LOG_AND_RETHROW()
 
@@ -109,6 +140,11 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    //BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 113246208, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
    BOOST_REQUIRE_EQUAL( success(), settotal("worbli.admin", 172800000, 56623104, core_sym::from_string("0.0000"), "2019-09-19T23:59:59") );
    BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user1", 800000, 28311552, "2019-09-19T23:59:59") );
+   
+   // should fail on duplicate
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "duplicate distribution" ),
+      adddistrib("worbli.admin", "user1", 800000, 28311552, "2019-09-19T23:59:59") );
+   
    BOOST_REQUIRE_EQUAL( success(), adddistrib("worbli.admin", "user2", 172000000, 28311552, "2019-09-19T23:59:59") );
 
    // this should fail as we are over subscribed
@@ -118,8 +154,16 @@ BOOST_FIXTURE_TEST_CASE( test_distributions, worbli_system_tester ) try {
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "cpu allocation greater than 100%" ),
       adddistrib("worbli.admin", "user3", 1, 0, "2019-09-19T23:59:59") );
 
-   //std::cout << get_resource_config() << std::endl;
-   //std::cout << get_system_usage(1) << std::endl;
+   BOOST_REQUIRE_EQUAL( success(), commitusage("worbli.admin", "2019-09-19T23:59:59") );
+
+   std::cout << get_accountpay(N(user1)) << std::endl;
+   std::cout << get_accountpay(N(user2)) << std::endl;
+   std::cout << get_balance("eosio.ppay") << std::endl;
+   std::cout << get_balance("eosio.usage") << std::endl;
+   std::cout << get_system_usage(1) << std::endl;
+
+   // test payouts
+   // test when numbers line up exactly
 
 
 } FC_LOG_AND_RETHROW()
