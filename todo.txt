@@ -19,3 +19,15 @@ Daily CPU Capacity (us): 200000 * 2 * 60 * 60 * 24 = 34560000000
 
 8-byte words
 
+### revised registration workflow
+- add producers reserve and primary (worbli)
+- promote to active (worbli, prerequisite=add to producers)
+- regprod (producer, prerequisite=promote to active)promote to active
+- unregprod (producer)
+- demote from active (worbli)
+- remove producer (worbli)
+
+
+
+
+

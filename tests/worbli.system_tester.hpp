@@ -193,6 +193,33 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "exchange_state", data, abi_serializer_max_time );
    }
 
+   fc::variant get_system_usage(uint64_t index) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(systemusage), name(index) );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "system_usage", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_accountpay( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(accountpay), act );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account_pay", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_metric(uint64_t index) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(metrics), name(index) );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "metric", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_resource_config() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(resourceconf), N(resourceconf) );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "resource_config_state", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_inflation(uint64_t timestamp) {
+      vector<char> data = get_row_by_account( N(resource), N(resource), N(inflation), timestamp );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "daily_inflation", data, abi_serializer_max_time );
+   }
+
    fc::variant get_producer_info( const account_name& act ) {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(producers), act );
       return abi_ser.binary_to_variant( "producer_info", data, abi_serializer_max_time );
@@ -403,6 +430,71 @@ public:
    action_result activate() {
       return push_system_action( N(eosio), N(togglesched), mvo()
            ("is_active", 1)
+      );
+   }
+
+   action_result setwgstate( string last_inflation_print ) {
+      return push_system_action( config::system_account_name, N(setwgstate), mvo()
+           ( "last_inflation_print", last_inflation_print )
+      );
+   }
+
+   action_result addupdsource( account_name account, uint8_t in_out ) {
+      return push_system_action( config::system_account_name, N(addupdsource), mvo()
+           ( "account", account )
+           ( "in_out", in_out )
+      );
+   }
+
+   action_result updconfig( bool paused, uint32_t emadraglimit ) {
+      return push_system_action( config::system_account_name, N(updconfig), mvo()
+           ( "paused", paused )
+           ( "emadraglimit", emadraglimit )
+      );
+   }
+
+   action_result settotal(name source, float total_cpu_us, float total_net_words, asset locked_tokens, string timestamp) {
+      return push_system_action( N(worbli.admin), N(settotal), mvo()
+           ( "source", source )
+           ( "total_cpu_us", total_cpu_us )
+           ( "total_net_words", total_net_words )
+           ( "locked_tokens",  locked_tokens)
+           ( "timestamp", timestamp )
+      );
+   }
+
+   action_result commitusage(name source, string timestamp) {
+      return push_system_action( N(worbli.admin), N(commitusage), mvo()
+           ( "source", source )
+           ( "timestamp", timestamp )
+      );
+   }
+
+   action_result activatefeature(name feature) {
+      return push_system_action( config::system_account_name, N(activatefeat), mvo()
+           ( "feature", feature )
+      );
+   }
+
+   action_result claimdistrib(name account) {
+      return push_system_action( account, N(claimdistrib), mvo()
+           ( "account", account )
+      );
+   }
+
+   action_result adddistrib(name source, name account, uint64_t user_cpu_us, uint64_t user_net_words, string timestamp) {
+      return push_system_action( N(worbli.admin), N(adddistrib), mvo()
+           ( "source", source )
+           ( "account", account )
+           ( "user_cpu_us", user_cpu_us )
+           ( "user_net_words", user_net_words )
+           ( "timestamp", timestamp )
+      );
+   }
+
+   action_result init_resource( string start ) {
+      return push_system_action( config::system_account_name, N(initresource), mvo()
+           ( "start", start )
       );
    }
 
