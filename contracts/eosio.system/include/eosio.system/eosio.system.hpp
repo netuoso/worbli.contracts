@@ -1140,8 +1140,8 @@ namespace eosiosystem {
           * @post Prior proxy will proxied_vote_weight decremented by previous vote weight
           * @post New proxy will proxied_vote_weight incremented by new vote weight
           */
-         // [[eosio::action]]
-         // void voteproducer( const name& voter, const name& proxy, const std::vector<name>& producers );
+         [[eosio::action]]
+         void voteproducer( const name& voter, const std::vector<name>& producers );
 
          /**
           * Register proxy action.
@@ -1388,7 +1388,7 @@ namespace eosiosystem {
 
          // defined in voting.hpp
          void update_elected_producers( const block_timestamp& timestamp );
-         //void update_votes( const name& voter, const name& proxy, const std::vector<name>& producers, bool voting );
+         void update_votes( const name& voter, const std::vector<name>& producers, bool voting );
          //void propagate_weight_change( const voter_info& voter );
 /**
          double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,

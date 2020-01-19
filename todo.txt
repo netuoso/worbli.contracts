@@ -28,6 +28,16 @@ Daily CPU Capacity (us): 200000 * 2 * 60 * 60 * 24 = 34560000000
 - remove producer (worbli)
 
 
+Voting:
+
+addistrib:
+   - calculate user voting weight ( # of votes based on utility)
+   - iterate through _voter.producers
+   - update producer.total_votes
+   - update _voter.last_vote_weight
+
+
+
 
 
 
