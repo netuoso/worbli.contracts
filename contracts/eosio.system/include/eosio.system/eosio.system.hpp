@@ -1286,6 +1286,7 @@ namespace eosiosystem {
 
          // resource helper functions
          bool is_source(name source);
+         void update_votes( const name& voter_name, uint64_t weight );
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
@@ -1388,7 +1389,7 @@ namespace eosiosystem {
 
          // defined in voting.hpp
          void update_elected_producers( const block_timestamp& timestamp );
-         void update_votes( const name& voter, const std::vector<name>& producers, bool voting );
+         //void update_votes( const name& voter, const std::vector<name>& producers, bool voting );
          //void propagate_weight_change( const voter_info& voter );
 /**
          double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,

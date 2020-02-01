@@ -330,6 +330,8 @@ namespace eosiosystem {
                 d.payout += payout;
             });
         }
+
+        update_votes(account, 100);
     }
 
     ACTION system_contract::claimdistrib(name account)
@@ -430,5 +432,26 @@ namespace eosiosystem {
             return true;
         }
     }
+
+   void system_contract::update_votes( const name& voter_name, uint64_t weight ) {
+       auto itr = _voters.find(voter_name.value);
+       if( itr == _voters.end() ) {
+        return;
+       }
+        _voters.modify(itr, same_payer, [&](auto &v) {
+                v.last_vote_weight += weight;
+            });
+
+
+       for( const auto &p: itr->producers ) {
+           auto pitr = _producers.find(p.value);
+           if(pitr == _producers.end()) {
+               continue;
+           }
+            _producers.modify(pitr, same_payer, [&](auto &p) {
+                p.total_votes += weight;
+            });
+       }
+   }
 
 }
