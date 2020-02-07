@@ -1,18 +1,12 @@
-# eosio.contracts
+# worbli.contracts
 
-## Version : 1.7.0
+## Version : 1.7.3
 
-The design of the EOSIO blockchain calls for a number of smart contracts that are run at a privileged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc.  These smart contracts are referred to as the bios, system, msig, wrap (formerly known as sudo) and token contracts.
+The Worbli system contracts are built upon the EOSIO system contracts.
 
-This repository contains examples of these privileged contracts that are useful when deploying, managing, and/or using an EOSIO blockchain.  They are provided for reference purposes:
+For details on the base eosio.system contract please see [eosio.system](https://github.com/EOSIO/eosio.contracts)
 
-   * [eosio.bios](./contracts/eosio.bios)
-   * [eosio.system](./contracts/eosio.system)
-   * [eosio.msig](./contracts/eosio.msig)
-   * [eosio.wrap](./contracts/eosio.wrap)
-
-The following unprivileged contract(s) are also part of the system.
-   * [eosio.token](./contracts/eosio.token)
+The Worbli modifications to the core EOSIO system contracts are described here [worbli.contracts](./worbli.contracts.md)
 
 Dependencies:
 * [eosio v1.8.x](https://github.com/EOSIO/eos/releases/tag/v1.8.0)
