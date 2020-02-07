@@ -44,7 +44,27 @@ Removes the producer from the producers table.
 
 Todo: Determine what to do with votes
 
-## Producer Management
+## Account Management
+
+### newaccount()
+
+***modifications:***
+
+* admin and eosio have no restrictions
+* user need to pass identity and subaccount limit checks
+* removed name bidding
+* record account relationships in multindex
+
+### delegateram( name from, name receiver, int64_t bytes )
+
+Allows admin or eosio to delegate (lend RAM) to other accounts. Undelegate is is not implemented
+
+### buyram
+
+
+
+
+
 
 
 
